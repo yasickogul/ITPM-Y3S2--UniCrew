@@ -1,0 +1,273 @@
+// Mock data for the student collaboration platform
+
+export const mockCommunities = [
+  {
+    id: '1',
+    name: 'Computer Science Society',
+    description: 'A community for CS students to collaborate, share knowledge, and work on projects together.',
+    faculty: 'Engineering',
+    year: 'All Years',
+    memberCount: 245,
+    banner: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800',
+    members: ['1', '2', '3', '4'],
+  },
+  {
+    id: '2',
+    name: 'Data Science Club',
+    description: 'Learn and practice data science, machine learning, and AI together.',
+    faculty: 'Engineering',
+    year: 'All Years',
+    memberCount: 189,
+    banner: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800',
+    members: ['1', '5', '6'],
+  },
+  {
+    id: '3',
+    name: 'Business Analytics Group',
+    description: 'Exploring business analytics, market research, and strategic planning.',
+    faculty: 'Business',
+    year: 'All Years',
+    memberCount: 156,
+    banner: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800',
+    members: ['2', '4', '7'],
+  },
+  {
+    id: '4',
+    name: 'First Year Engineering',
+    description: 'Support network for first-year engineering students.',
+    faculty: 'Engineering',
+    year: '1',
+    memberCount: 312,
+    banner: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800',
+    members: ['3', '6', '8'],
+  },
+];
+
+export const mockPosts = [
+  {
+    id: '1',
+    title: 'Looking for study partners for Algorithm Design exam',
+    content: 'Hey everyone! The midterm is coming up next week. Anyone interested in forming a study group?',
+    author: 'John Doe',
+    authorId: '1',
+    communityId: '1',
+    communityName: 'Computer Science Society',
+    category: 'Study Group',
+    timestamp: '2 hours ago',
+    status: 'Open',
+    commentCount: 12,
+    comments: [
+      { id: '1', author: 'Jane Smith', content: 'I\'m interested! When are you thinking?', timestamp: '1 hour ago' },
+      { id: '2', author: 'Mike Johnson', content: 'Count me in too!', timestamp: '45 minutes ago' },
+    ],
+  },
+  {
+    id: '2',
+    title: 'Machine Learning Project Team Needed',
+    content: 'Working on a sentiment analysis project. Need 2 more team members with Python/TensorFlow experience.',
+    author: 'Sarah Williams',
+    authorId: '2',
+    communityId: '2',
+    communityName: 'Data Science Club',
+    category: 'Project',
+    timestamp: '5 hours ago',
+    status: 'Open',
+    commentCount: 8,
+    comments: [],
+  },
+  {
+    id: '3',
+    title: 'Question about Dynamic Programming',
+    content: 'Can someone explain the difference between memoization and tabulation in DP?',
+    author: 'Alex Chen',
+    authorId: '3',
+    communityId: '1',
+    communityName: 'Computer Science Society',
+    category: 'Question',
+    timestamp: '1 day ago',
+    status: 'Resolved',
+    commentCount: 15,
+    comments: [],
+  },
+];
+
+export const mockEvents = [
+  {
+    id: '1',
+    title: 'Hackathon 2026: Build the Future',
+    date: '2026-03-15',
+    time: '09:00 AM',
+    location: 'Engineering Building, Hall A',
+    description: '24-hour hackathon focused on solving real-world problems using technology.',
+    communityId: '1',
+    communityName: 'Computer Science Society',
+    googleFormUrl: 'https://forms.google.com/example1',
+    organizer: 'John Doe',
+    organizerId: '1',
+  },
+  {
+    id: '2',
+    title: 'Machine Learning Workshop',
+    date: '2026-03-10',
+    time: '02:00 PM',
+    location: 'https://zoom.us/example',
+    description: 'Introduction to neural networks and deep learning. Hands-on coding session.',
+    communityId: '2',
+    communityName: 'Data Science Club',
+    googleFormUrl: 'https://forms.google.com/example2',
+    organizer: 'Sarah Williams',
+    organizerId: '2',
+  },
+  {
+    id: '3',
+    title: 'Career Fair Preparation Session',
+    date: '2026-03-08',
+    time: '05:00 PM',
+    location: 'Student Center, Room 201',
+    description: 'Resume review, interview tips, and networking strategies.',
+    communityId: '3',
+    communityName: 'Business Analytics Group',
+    googleFormUrl: 'https://forms.google.com/example3',
+    organizer: 'Emily Brown',
+    organizerId: '4',
+  },
+];
+
+export const mockMessages = [
+  {
+    id: '1',
+    communityId: '1',
+    sender: 'John Doe',
+    senderId: '1',
+    message: 'Hey everyone! Anyone working on the assignment 3?',
+    timestamp: '10:30 AM',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
+  },
+  {
+    id: '2',
+    communityId: '1',
+    sender: 'Jane Smith',
+    senderId: '2',
+    message: 'Yes! I\'m stuck on question 2. The recursion part is tricky.',
+    timestamp: '10:32 AM',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jane',
+  },
+  {
+    id: '3',
+    communityId: '1',
+    sender: 'Mike Johnson',
+    senderId: '3',
+    message: 'I can help with that. Let me share my approach.',
+    timestamp: '10:35 AM',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mike',
+  },
+];
+
+export const mockStudents = [
+  {
+    id: '1',
+    name: 'John Doe',
+    email: 'john.doe@university.edu',
+    studentId: 'STU2024001',
+    degree: 'Computer Science',
+    year: '3',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
+    skills: ['React', 'TypeScript', 'Node.js', 'Python'],
+    about: 'Passionate about building innovative solutions.',
+    linkedin: 'https://linkedin.com/in/johndoe',
+    github: 'https://github.com/johndoe',
+  },
+  {
+    id: '2',
+    name: 'Jane Smith',
+    email: 'jane.smith@university.edu',
+    studentId: 'STU2024002',
+    degree: 'Data Science',
+    year: '2',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jane',
+    skills: ['Python', 'Machine Learning', 'SQL', 'Tableau'],
+    about: 'Data enthusiast and problem solver.',
+  },
+];
+
+export const mockPendingPosts = [
+  {
+    id: 'p1',
+    title: 'New Study Resource Repository',
+    author: 'Alex Chen',
+    community: 'Computer Science Society',
+    timestamp: '1 hour ago',
+    content: 'I\'ve created a GitHub repo with study materials for all CS courses.',
+  },
+  {
+    id: 'p2',
+    title: 'Internship Opportunity at Tech Startup',
+    author: 'Emily Brown',
+    community: 'Business Analytics Group',
+    timestamp: '3 hours ago',
+    content: 'A local startup is hiring interns. Great opportunity for business students.',
+  },
+];
+
+export const mockReportedPosts = [
+  {
+    id: 'r1',
+    postTitle: 'Selling course notes for $50',
+    reportedBy: 'Sarah Williams',
+    reason: 'Commercial activity',
+    aiSeverity: 'High',
+    timestamp: '2 hours ago',
+  },
+  {
+    id: 'r2',
+    postTitle: 'Inappropriate comment thread',
+    reportedBy: 'Mike Johnson',
+    reason: 'Offensive language',
+    aiSeverity: 'Medium',
+    timestamp: '5 hours ago',
+  },
+];
+
+export const mockUniversities = [
+  {
+    id: 'u1',
+    name: 'Harvard University',
+    emailDomain: 'harvard.edu',
+    status: 'Active',
+    totalStudents: 2450,
+    totalCommunities: 45,
+  },
+  {
+    id: 'u2',
+    name: 'Stanford University',
+    emailDomain: 'stanford.edu',
+    status: 'Active',
+    totalStudents: 3120,
+    totalCommunities: 52,
+  },
+  {
+    id: 'u3',
+    name: 'MIT',
+    emailDomain: 'mit.edu',
+    status: 'Active',
+    totalStudents: 1890,
+    totalCommunities: 38,
+  },
+];
+
+export const mockUniversityAdmins = [
+  {
+    id: 'ua1',
+    name: 'Dr. Robert Johnson',
+    email: 'r.johnson@harvard.edu',
+    university: 'Harvard University',
+    status: 'Active',
+  },
+  {
+    id: 'ua2',
+    name: 'Prof. Lisa Chen',
+    email: 'l.chen@stanford.edu',
+    university: 'Stanford University',
+    status: 'Active',
+  },
+];
