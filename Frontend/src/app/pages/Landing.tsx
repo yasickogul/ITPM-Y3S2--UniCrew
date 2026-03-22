@@ -46,11 +46,7 @@ export default function Landing() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
         >
-          <Link to="/register">
-            <Button size="lg" className="bg-gradient-to-r from-blue-600 to-indigo-600">
-              Register Now
-            </Button>
-          </Link>
+          
           <Link to="/login">
             <Button size="lg" variant="outline">
               Sign In

@@ -1,3 +1,15 @@
+import { Outlet, Link, useLocation, useNavigate } from 'react-router';
+import { useAuth } from '../context/AuthContext';
+import { Button } from '../components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../components/ui/dropdown-menu';
 import { Bell, Home, Users, MessageSquare, Calendar, User, LogOut, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
