@@ -4,6 +4,10 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 
 const universityRoutes = require("./routes/university.routes");
+const eventRoutes = require("./routes/event.routes");
+const authRoutes = require("./routes/auth.routes");
+const adminRoutes = require("./routes/admin.routes");
+const communityRoutes = require("./routes/community.routes");
 
 const app = express();
 const PORT = process.env.PORT;
@@ -20,6 +24,10 @@ mongoose
 
 // Routes
 app.use("/api/universities", universityRoutes);
+app.use("/api/events", eventRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/communities", communityRoutes);
 
 // Test Route
 app.get("/", (req, res) => {
