@@ -98,16 +98,7 @@ export default function CreateEvent() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="location">Location / Link *</Label>
-              <Input
-                id="location"
-                placeholder="Room 101 or https://zoom.us/example"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                required
-              />
-            </div>
+            
 
             <div className="space-y-2">
               <Label htmlFor="googleForm">Google Form Registration URL</Label>
