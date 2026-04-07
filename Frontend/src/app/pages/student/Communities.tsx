@@ -93,7 +93,7 @@ export default function Communities() {
                 <span className="text-sm text-gray-600">{community.memberCount} members</span>
                 <Link to={`/communities/${community.id}`}>
                   <Button size="sm" className="bg-gradient-to-r from-blue-600 to-indigo-600">
-                    View
+                    Join
                   </Button>
                 </Link>
               </div>
