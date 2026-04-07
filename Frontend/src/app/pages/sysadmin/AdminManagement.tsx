@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -8,7 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
 import { Badge } from '../../components/ui/badge';
 import { Plus, RotateCw } from 'lucide-react';
-import { mockUniversityAdmins, mockUniversities } from '../../data/mockData';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const NAME_REGEX = /^[A-Za-z0-9 ]+$/;
@@ -40,6 +41,19 @@ function validateAdminForm(data: { name: string; email: string; university: stri
   return errors;
 }
 
+type UniversityOption = {
+  id: string;
+  name: string;
+};
+
+type UniversityAdmin = {
+  id: string;
+  name: string;
+  email: string;
+  university: string;
+  status: string;
+};
+
 export default function AdminManagement() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -48,6 +62,58 @@ export default function AdminManagement() {
     university: '',
   });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [universities, setUniversities] = useState<UniversityOption[]>([]);
+  const [admins, setAdmins] = useState<UniversityAdmin[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [apiError, setApiError] = useState('');
+
+  const fetchPageData = async () => {
+    setApiError('');
+    setIsLoading(true);
+
+    try {
+      const [universitiesRes, adminsRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/universities`),
+        fetch(`${API_BASE_URL}/api/system-admin/university-admins`),
+      ]);
+
+      const universitiesPayload = await universitiesRes.json();
+      const adminsPayload = await adminsRes.json();
+
+      if (!universitiesRes.ok) {
+        throw new Error(universitiesPayload.message || 'Failed to load universities');
+      }
+
+      if (!adminsRes.ok) {
+        throw new Error(adminsPayload.message || 'Failed to load university admins');
+      }
+
+      const universityItems = (universitiesPayload.data || []).map((u: any) => ({
+        id: u._id,
+        name: u.name,
+      }));
+
+      const adminItems = (adminsPayload.data || []).map((admin: any) => ({
+        id: admin._id,
+        name: admin.fullName,
+        email: admin.email,
+        university: admin.university?.name || 'Unknown University',
+        status: admin.status || 'Active',
+      }));
+
+      setUniversities(universityItems);
+      setAdmins(adminItems);
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : 'Something went wrong');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPageData();
+  }, []);
 
   const resetCreateForm = () => {
     setFormData({ name: '', email: '', university: '' });
@@ -61,15 +127,43 @@ export default function AdminManagement() {
     }
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     const errors = validateAdminForm(formData);
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       return;
     }
-    // In real app, would create admin
-    setIsCreateOpen(false);
-    resetCreateForm();
+
+    setIsSubmitting(true);
+    setApiError('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/system-admin/university-admins`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fullName: formData.name.trim(),
+          email: formData.email.trim().toLowerCase(),
+          assignedUniversity: formData.university,
+        }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.message || 'Failed to create university admin');
+      }
+
+      setIsCreateOpen(false);
+      resetCreateForm();
+      fetchPageData();
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : 'Something went wrong');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -142,7 +236,7 @@ export default function AdminManagement() {
                     <SelectValue placeholder="Select university" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockUniversities.map((university) => (
+                    {universities.map((university) => (
                       <SelectItem key={university.id} value={university.id}>
                         {university.name}
                       </SelectItem>
@@ -159,7 +253,9 @@ export default function AdminManagement() {
                 </p>
               </div>
               <div className="flex gap-2 mt-6">
-                <Button onClick={handleCreate} className="flex-1">Create Admin</Button>
+                <Button onClick={handleCreate} className="flex-1" disabled={isSubmitting}>
+                  {isSubmitting ? 'Creating...' : 'Create Admin'}
+                </Button>
                 <Button variant="outline" type="button" onClick={() => handleDialogOpenChange(false)}>
                   Cancel
                 </Button>
@@ -175,6 +271,9 @@ export default function AdminManagement() {
           <CardDescription>Manage administrator accounts</CardDescription>
         </CardHeader>
         <CardContent>
+          {apiError ? (
+            <p className="mb-4 text-sm text-red-600">{apiError}</p>
+          ) : null}
           <Table>
             <TableHeader>
               <TableRow>
@@ -186,24 +285,38 @@ export default function AdminManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockUniversityAdmins.map((admin) => (
-                <TableRow key={admin.id}>
-                  <TableCell>
-                    <p className="font-medium">{admin.name}</p>
-                  </TableCell>
-                  <TableCell>{admin.email}</TableCell>
-                  <TableCell>{admin.university}</TableCell>
-                  <TableCell>
-                    <Badge variant="default">{admin.status}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="outline" size="sm">
-                      <RotateCw className="w-4 h-4 mr-2" />
-                      Reset Password
-                    </Button>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-gray-500">
+                    Loading admins...
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : admins.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-gray-500">
+                    No university admins yet
+                  </TableCell>
+                </TableRow>
+              ) : (
+                admins.map((admin) => (
+                  <TableRow key={admin.id}>
+                    <TableCell>
+                      <p className="font-medium">{admin.name}</p>
+                    </TableCell>
+                    <TableCell>{admin.email}</TableCell>
+                    <TableCell>{admin.university}</TableCell>
+                    <TableCell>
+                      <Badge variant="default">{admin.status}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="outline" size="sm" disabled>
+                        <RotateCw className="w-4 h-4 mr-2" />
+                        Reset Password
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>

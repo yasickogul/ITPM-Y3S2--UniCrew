@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -7,7 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
 import { Badge } from '../../components/ui/badge';
 import { Plus, Edit, Trash2 } from 'lucide-react';
-import { mockUniversities } from '../../data/mockData';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050';
 
 /** Accepts e.g. harvard.edu or @harvard.edu */
 const DOMAIN_REGEX =
@@ -45,6 +46,15 @@ function validateUniversityForm(data: { name: string; emailDomain: string }) {
   return errors;
 }
 
+type University = {
+  id: string;
+  name: string;
+  emailDomain: string;
+  status: string;
+  totalStudents: number;
+  totalCommunities: number;
+};
+
 export default function UniversityManagement() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -52,6 +62,43 @@ export default function UniversityManagement() {
     emailDomain: '',
   });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [universities, setUniversities] = useState<University[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [apiError, setApiError] = useState('');
+
+  const fetchUniversities = async () => {
+    setApiError('');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/universities`);
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.message || 'Failed to load universities');
+      }
+
+      const items = (payload.data || []).map((university: any) => ({
+        id: university._id,
+        name: university.name,
+        emailDomain: university.domain,
+        status: 'Active',
+        totalStudents: 0,
+        totalCommunities: 0,
+      }));
+
+      setUniversities(items);
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : 'Something went wrong');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUniversities();
+  }, []);
 
   const resetCreateForm = () => {
     setFormData({ name: '', emailDomain: '' });
@@ -65,15 +112,42 @@ export default function UniversityManagement() {
     }
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     const errors = validateUniversityForm(formData);
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       return;
     }
-    // In real app, would create university (use normalizeEmailDomain(formData.emailDomain) for API)
-    setIsCreateOpen(false);
-    resetCreateForm();
+
+    setIsSubmitting(true);
+    setApiError('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/universities`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          emailDomain: normalizeEmailDomain(formData.emailDomain),
+        }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.message || 'Failed to create university');
+      }
+
+      setIsCreateOpen(false);
+      resetCreateForm();
+      fetchUniversities();
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : 'Something went wrong');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -136,7 +210,9 @@ export default function UniversityManagement() {
                 ) : null}
               </div>
               <div className="flex gap-2 mt-6">
-                <Button onClick={handleCreate} className="flex-1">Add University</Button>
+                <Button onClick={handleCreate} className="flex-1" disabled={isSubmitting}>
+                  {isSubmitting ? 'Adding...' : 'Add University'}
+                </Button>
                 <Button variant="outline" type="button" onClick={() => handleDialogOpenChange(false)}>
                   Cancel
                 </Button>
@@ -152,6 +228,9 @@ export default function UniversityManagement() {
           <CardDescription>Manage registered universities</CardDescription>
         </CardHeader>
         <CardContent>
+          {apiError ? (
+            <p className="mb-4 text-sm text-red-600">{apiError}</p>
+          ) : null}
           <Table>
             <TableHeader>
               <TableRow>
@@ -164,33 +243,47 @@ export default function UniversityManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockUniversities.map((university) => (
-                <TableRow key={university.id}>
-                  <TableCell>
-                    <p className="font-medium">{university.name}</p>
-                  </TableCell>
-                  <TableCell>
-                    <code className="text-sm bg-gray-100 px-2 py-1 rounded">
-                      @{university.emailDomain}
-                    </code>
-                  </TableCell>
-                  <TableCell>{university.totalStudents.toLocaleString()}</TableCell>
-                  <TableCell>{university.totalCommunities}</TableCell>
-                  <TableCell>
-                    <Badge variant="default">{university.status}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="sm">
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <Trash2 className="w-4 h-4 text-red-600" />
-                      </Button>
-                    </div>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-gray-500">
+                    Loading universities...
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : universities.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-gray-500">
+                    No universities yet
+                  </TableCell>
+                </TableRow>
+              ) : (
+                universities.map((university) => (
+                  <TableRow key={university.id}>
+                    <TableCell>
+                      <p className="font-medium">{university.name}</p>
+                    </TableCell>
+                    <TableCell>
+                      <code className="text-sm bg-gray-100 px-2 py-1 rounded">
+                        @{university.emailDomain}
+                      </code>
+                    </TableCell>
+                    <TableCell>{university.totalStudents.toLocaleString()}</TableCell>
+                    <TableCell>{university.totalCommunities}</TableCell>
+                    <TableCell>
+                      <Badge variant="default">{university.status}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="sm" disabled>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" disabled>
+                          <Trash2 className="w-4 h-4 text-red-600" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
