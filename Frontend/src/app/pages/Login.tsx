@@ -4,36 +4,41 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { useAuth, UserRole } from '../context/AuthContext';
+import { useAuthStore, UserRole } from '../stores/authStore';
 import { Users } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { motion } from 'motion/react';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isLoading, error, clearError } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [localError, setLocalError] = useState('');
   const [role, setRole] = useState<UserRole>('student');
 
-  const handleSubmit = (e: React.FormEvent, loginRole: UserRole) => {
+  const handleSubmit = async (e: React.FormEvent, loginRole: UserRole) => {
     e.preventDefault();
-    setError('');
+    setLocalError('');
+    clearError();
 
     if (!email || !password) {
-      setError('Please fill in all fields');
+      setLocalError('Please fill in all fields');
       return;
     }
 
-    login(email, password, loginRole);
-    
-    if (loginRole === 'student') {
-      navigate('/dashboard');
-    } else if (loginRole === 'university_admin') {
-      navigate('/university-admin');
-    } else if (loginRole === 'system_admin') {
-      navigate('/system-admin');
+    try {
+      await login(email, password, loginRole);
+      
+      if (loginRole === 'student') {
+        navigate('/dashboard');
+      } else if (loginRole === 'university_admin') {
+        navigate('/university-admin');
+      } else if (loginRole === 'system_admin') {
+        navigate('/system-admin');
+      }
+    } catch (err: any) {
+      setLocalError(err.response?.data?.message || 'Login failed');
     }
   };
 
@@ -114,14 +119,14 @@ export default function Login() {
                       />
                     </div>
 
-                    {error && (
+                    {(localError || error) && (
                       <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded text-sm">
-                        {error}
+                        {localError || error}
                       </div>
                     )}
 
-                    <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600">
-                      Sign In
+                    <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600" disabled={isLoading}>
+                      {isLoading ? 'Signing in...' : 'Sign In'}
                     </Button>
 
                     <div className="text-center">
@@ -157,14 +162,14 @@ export default function Login() {
                       />
                     </div>
 
-                    {error && (
+                    {(localError || error) && (
                       <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded text-sm">
-                        {error}
+                        {localError || error}
                       </div>
                     )}
 
-                    <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600">
-                      Sign In as University Admin
+                    <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600" disabled={isLoading}>
+                      {isLoading ? 'Signing in...' : 'Sign In as University Admin'}
                     </Button>
                   </form>
                 </TabsContent>
@@ -193,14 +198,14 @@ export default function Login() {
                       />
                     </div>
 
-                    {error && (
+                    {(localError || error) && (
                       <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded text-sm">
-                        {error}
+                        {localError || error}
                       </div>
                     )}
 
-                    <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600">
-                      Sign In as System Admin
+                    <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600" disabled={isLoading}>
+                      {isLoading ? 'Signing in...' : 'Sign In as System Admin'}
                     </Button>
                   </form>
                 </TabsContent>

@@ -4,15 +4,17 @@ const JWT_SECRET = process.env.JWT_SECRET || "unicrew_secret_key";
 
 exports.authenticate = (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
+    let token = req.cookies?.token;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!token && req.headers.authorization?.startsWith("Bearer ")) {
+      token = req.headers.authorization.split(" ")[1];
+    }
+
+    if (!token) {
       return res.status(401).json({
         message: "No token provided",
       });
     }
-
-    const token = authHeader.split(" ")[1];
 
     const decoded = jwt.verify(token, JWT_SECRET);
 
@@ -54,10 +56,13 @@ exports.authorize = (...roles) => {
 
 exports.optionalAuth = (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
+    let token = req.cookies?.token;
 
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      const token = authHeader.split(" ")[1];
+    if (!token && req.headers.authorization?.startsWith("Bearer ")) {
+      token = req.headers.authorization.split(" ")[1];
+    }
+
+    if (token) {
       const decoded = jwt.verify(token, JWT_SECRET);
       req.user = {
         id: decoded.id,

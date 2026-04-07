@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
 
 const universityRoutes = require("./routes/university.routes");
 const eventRoutes = require("./routes/event.routes");
@@ -12,8 +13,26 @@ const communityRoutes = require("./routes/community.routes");
 const app = express();
 const PORT = process.env.PORT;
 
-// ONLY REQUIRED middleware (for JSON body)
-app.use(cors());
+app.use(cookieParser());
+app.use(cors({
+  origin: (origin, callback) => {
+    const allowedOrigins = [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "http://localhost:5175",
+      process.env.CLIENT_URL,
+    ].filter(Boolean);
+    
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
 app.use(express.json());
 
 // MongoDB Connection

@@ -2,6 +2,58 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/user.model");
 
 const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+const JWT_SECRET = process.env.JWT_SECRET || "unicrew_secret_key";
+
+const generateTokens = (user) => {
+  const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
+  const refreshToken = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "30d" });
+  return { token, refreshToken };
+};
+
+const setCookies = (res, user) => {
+  const { token, refreshToken } = generateTokens(user);
+  
+  res.cookie("token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/",
+  });
+  
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+    path: "/",
+  });
+
+  res.cookie("userRole", user.role, {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/",
+  });
+
+  res.cookie("userId", user._id.toString(), {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/",
+  });
+
+  return { token, refreshToken };
+};
+
+const clearCookies = (res) => {
+  res.cookie("token", "", { httpOnly: true, expires: new Date(0), path: "/" });
+  res.cookie("refreshToken", "", { httpOnly: true, expires: new Date(0), path: "/" });
+  res.cookie("userRole", "", { httpOnly: false, expires: new Date(0), path: "/" });
+  res.cookie("userId", "", { httpOnly: false, expires: new Date(0), path: "/" });
+};
 
 exports.register = async (req, res) => {
   try {
@@ -40,17 +92,12 @@ exports.register = async (req, res) => {
       role: "student",
     });
 
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET || "unicrew_secret_key",
-      { expiresIn: "7d" }
-    );
+    const { token, refreshToken } = setCookies(res, user);
 
     res.status(201).json({
       message: "User registered successfully",
       data: {
         user,
-        token,
       },
     });
   } catch (error) {
@@ -101,18 +148,82 @@ exports.login = async (req, res) => {
       });
     }
 
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET || "unicrew_secret_key",
-      { expiresIn: "7d" }
-    );
+    const { token, refreshToken } = setCookies(res, user);
 
     res.status(200).json({
       message: "Login successful",
       data: {
         user,
-        token,
       },
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+exports.logout = async (req, res) => {
+  try {
+    clearCookies(res);
+    res.status(200).json({
+      message: "Logged out successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+exports.refreshToken = async (req, res) => {
+  try {
+    const refreshToken = req.cookies.refreshToken;
+    
+    if (!refreshToken) {
+      return res.status(401).json({
+        message: "Refresh token required",
+      });
+    }
+
+    const decoded = jwt.verify(refreshToken, JWT_SECRET);
+    const user = await User.findById(decoded.id);
+
+    if (!user || !user.isActive) {
+      clearCookies(res);
+      return res.status(401).json({
+        message: "Invalid refresh token",
+      });
+    }
+
+    const { token, refreshToken: newRefreshToken } = setCookies(res, user);
+
+    res.status(200).json({
+      message: "Token refreshed successfully",
+      data: {
+        user,
+      },
+    });
+  } catch (error) {
+    clearCookies(res);
+    res.status(401).json({
+      message: "Invalid refresh token",
+    });
+  }
+};
+
+exports.getMe = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    res.status(200).json({
+      message: "User fetched successfully",
+      data: user,
     });
   } catch (error) {
     res.status(500).json({
