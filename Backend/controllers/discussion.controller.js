@@ -376,11 +376,12 @@ exports.addComment = async (req, res) => {
 
     discussion.comments.push(newComment);
     await discussion.save();
+    const createdComment = discussion.comments[discussion.comments.length - 1];
 
     res.status(201).json({
       success: true,
       message: 'Comment added successfully',
-      data: newComment,
+      data: createdComment,
     });
   } catch (error) {
     console.error('Error adding comment:', error);

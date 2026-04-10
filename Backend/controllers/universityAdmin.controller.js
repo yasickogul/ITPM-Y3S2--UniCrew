@@ -1,8 +1,19 @@
 const UniversityAdmin = require("../models/universityAdmin.model");
 const University = require("../models/university.model");
+const User = require("../models/user.model");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+const generateTemporaryPassword = (length = 10) => {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789@#$";
+  let password = "";
+  for (let i = 0; i < length; i += 1) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+};
 
 exports.createUniversityAdmin = async (req, res) => {
   try {
@@ -34,11 +45,41 @@ exports.createUniversityAdmin = async (req, res) => {
       });
     }
 
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (existingUser) {
+      return res.status(409).json({
+        message: "A user with this email already exists",
+      });
+    }
+
     const admin = await UniversityAdmin.create({
       fullName: String(fullName).trim(),
-      email: String(email).trim().toLowerCase(),
+      email: normalizedEmail,
       university: assignedUniversity,
     });
+
+    const temporaryPassword = generateTemporaryPassword();
+    const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
+
+    await User.create({
+      fullName: String(fullName).trim(),
+      email: normalizedEmail,
+      password: hashedPassword,
+      role: "university_admin",
+      university: assignedUniversity,
+      status: "Active",
+    });
+
+    const passwordDeliveryToken = jwt.sign(
+      {
+        email: normalizedEmail,
+        role: "university_admin",
+        purpose: "temporary_password_delivery",
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
 
     const populatedAdmin = await UniversityAdmin.findById(admin._id).populate(
       "university",
@@ -48,6 +89,11 @@ exports.createUniversityAdmin = async (req, res) => {
     return res.status(201).json({
       message: "University admin created successfully",
       data: populatedAdmin,
+      credentials: {
+        // Demo flow until email service is added.
+        temporaryPassword,
+        passwordDeliveryToken,
+      },
     });
   } catch (error) {
     if (error.code === 11000) {

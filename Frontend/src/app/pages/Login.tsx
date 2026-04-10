@@ -4,9 +4,8 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { useAuth, UserRole } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { Users } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { motion } from 'motion/react';
 
 export default function Login() {
@@ -15,9 +14,8 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [role, setRole] = useState<UserRole>('student');
 
-  const handleSubmit = (e: React.FormEvent, loginRole: UserRole) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -26,13 +24,17 @@ export default function Login() {
       return;
     }
 
-    login(email, password, loginRole);
-    
-    if (loginRole === 'student') {
+    const result = await login(email, password);
+    if (!result.success) {
+      setError(result.error || 'Unable to login');
+      return;
+    }
+
+    if (result.role === 'student') {
       navigate('/dashboard');
-    } else if (loginRole === 'university_admin') {
+    } else if (result.role === 'university_admin') {
       navigate('/university-admin');
-    } else if (loginRole === 'system_admin') {
+    } else if (result.role === 'system_admin') {
       navigate('/system-admin');
     }
   };
@@ -80,131 +82,54 @@ export default function Login() {
           <Card>
             <CardHeader>
               <CardTitle>Welcome Back</CardTitle>
-              <CardDescription>Sign in to your account to continue</CardDescription>
+              <CardDescription>Single login for Student, University Admin, and System Admin</CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="student" onValueChange={(value) => setRole(value as UserRole)}>
-                <TabsList className="grid w-full grid-cols-3 mb-4">
-                  <TabsTrigger value="student">Student</TabsTrigger>
-                  <TabsTrigger value="university_admin">Uni Admin</TabsTrigger>
-                  <TabsTrigger value="system_admin">Sys Admin</TabsTrigger>
-                </TabsList>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
 
-                <TabsContent value="student">
-                  <form onSubmit={(e) => handleSubmit(e, 'student')} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">University Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="john.doe@university.edu"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                      />
-                    </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Password</Label>
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="Enter your password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                      />
-                    </div>
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded text-sm">
+                    {error}
+                  </div>
+                )}
 
-                    {error && (
-                      <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded text-sm">
-                        {error}
-                      </div>
-                    )}
+                <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600">
+                  Sign In
+                </Button>
 
-                    <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600">
-                      Sign In
-                    </Button>
+                <div className="rounded-lg border bg-gray-50 p-3 text-xs text-gray-700 space-y-1">
+                  <p className="font-medium">Credential Source</p>
+                  <p>Login now uses backend credentials from the `users` collection.</p>
+                  <p>System Admin should use the seeded account you created in MongoDB.</p>
+                </div>
 
-                    <div className="text-center">
-                      <a href="#" className="text-sm text-blue-600 hover:underline">
-                        Forgot password?
-                      </a>
-                    </div>
-
-                  </form>
-                </TabsContent>
-
-                <TabsContent value="university_admin">
-                  <form onSubmit={(e) => handleSubmit(e, 'university_admin')} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="admin-email">Admin Email</Label>
-                      <Input
-                        id="admin-email"
-                        type="email"
-                        placeholder="admin@university.edu"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="admin-password">Password</Label>
-                      <Input
-                        id="admin-password"
-                        type="password"
-                        placeholder="Enter your password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                      />
-                    </div>
-
-                    {error && (
-                      <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded text-sm">
-                        {error}
-                      </div>
-                    )}
-
-                    <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600">
-                      Sign In as University Admin
-                    </Button>
-                  </form>
-                </TabsContent>
-
-                <TabsContent value="system_admin">
-                  <form onSubmit={(e) => handleSubmit(e, 'system_admin')} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="sys-email">System Admin Email</Label>
-                      <Input
-                        id="sys-email"
-                        type="email"
-                        placeholder="sysadmin@unicrew.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="sys-password">Password</Label>
-                      <Input
-                        id="sys-password"
-                        type="password"
-                        placeholder="Enter your password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                      />
-                    </div>
-
-                    {error && (
-                      <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded text-sm">
-                        {error}
-                      </div>
-                    )}
-
-                    <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600">
-                      Sign In as System Admin
-                    </Button>
-                  </form>
-                </TabsContent>
-              </Tabs>
+                <div className="text-center">
+                  <a href="#" className="text-sm text-blue-600 hover:underline">
+                    Forgot password?
+                  </a>
+                </div>
+              </form>
             </CardContent>
           </Card>
         </motion.div>

@@ -67,7 +67,7 @@ const discussionSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['Kuppi', 'Programming', 'Projects', 'Events', 'Career', 'General', 'Research', 'Study Group', 'Project', 'Question', 'Announcement', 'Resource'],
+    enum: ['Kuppi', 'Programming', 'Projects', 'Events', 'Career', 'General', 'Research'],
     default: 'General',
   },
   tags: [

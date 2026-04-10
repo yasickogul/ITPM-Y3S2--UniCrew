@@ -67,6 +67,9 @@ export default function AdminManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState('');
+  const [generatedPassword, setGeneratedPassword] = useState('');
+
+  const getAuthToken = () => localStorage.getItem('unicrew.auth.token');
 
   const fetchPageData = async () => {
     setApiError('');
@@ -75,7 +78,11 @@ export default function AdminManagement() {
     try {
       const [universitiesRes, adminsRes] = await Promise.all([
         fetch(`${API_BASE_URL}/api/universities`),
-        fetch(`${API_BASE_URL}/api/system-admin/university-admins`),
+        fetch(`${API_BASE_URL}/api/system-admin/university-admins`, {
+          headers: {
+            Authorization: `Bearer ${getAuthToken() || ''}`,
+          },
+        }),
       ]);
 
       const universitiesPayload = await universitiesRes.json();
@@ -136,12 +143,14 @@ export default function AdminManagement() {
 
     setIsSubmitting(true);
     setApiError('');
+    setGeneratedPassword('');
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/system-admin/university-admins`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${getAuthToken() || ''}`,
         },
         body: JSON.stringify({
           fullName: formData.name.trim(),
@@ -156,6 +165,7 @@ export default function AdminManagement() {
         throw new Error(payload.message || 'Failed to create university admin');
       }
 
+      setGeneratedPassword(payload?.credentials?.temporaryPassword || '');
       setIsCreateOpen(false);
       resetCreateForm();
       fetchPageData();
@@ -273,6 +283,13 @@ export default function AdminManagement() {
         <CardContent>
           {apiError ? (
             <p className="mb-4 text-sm text-red-600">{apiError}</p>
+          ) : null}
+          {generatedPassword ? (
+            <div className="mb-4 rounded border border-green-200 bg-green-50 p-3">
+              <p className="text-sm text-green-800">
+                University admin created. Temporary password: <span className="font-semibold">{generatedPassword}</span>
+              </p>
+            </div>
           ) : null}
           <Table>
             <TableHeader>

@@ -4,6 +4,7 @@ import { createBrowserRouter } from 'react-router';
 import StudentLayout from './layouts/StudentLayout';
 import UniversityAdminLayout from './layouts/UniversityAdminLayout';
 import SystemAdminLayout from './layouts/SystemAdminLayout';
+import { StudentGuard, SystemAdminGuard, UniversityAdminGuard } from './components/auth/RoleGuard';
 
 // Auth Pages
 import Landing from './pages/Landing';
@@ -50,98 +51,113 @@ export const router = createBrowserRouter([
   },
   // Student Routes
   {
-    path: '/',
-    Component: StudentLayout,
+    Component: StudentGuard,
     children: [
       {
-        path: 'dashboard',
-        Component: Dashboard,
-      },
-      {
-        path: 'communities',
-        Component: Communities,
-      },
-      {
-        path: 'communities/:id',
-        Component: CommunityDetails,
-      },
-      {
-        path: 'discussions',
-        Component: Discussions,
-      },
-      {
-        path: 'discussions/create',
-        Component: CreatePost,
-      },
-      {
-        path: 'discussions/:id',
-        Component: PostDetails,
-      },
-      {
-        path: 'chat/:communityId?',
-        Component: Chat,
-      },
-      {
-        path: 'events',
-        Component: Events,
-      },
-      {
-        path: 'events/create',
-        Component: CreateEvent,
-      },
-      {
-        path: 'events/:id',
-        Component: EventDetails,
-      },
-      {
-        path: 'profile',
-        Component: Profile,
-      },
-      {
-        path: 'students/:id',
-        Component: StudentProfile,
+        path: '/',
+        Component: StudentLayout,
+        children: [
+          {
+            path: 'dashboard',
+            Component: Dashboard,
+          },
+          {
+            path: 'communities',
+            Component: Communities,
+          },
+          {
+            path: 'communities/:id',
+            Component: CommunityDetails,
+          },
+          {
+            path: 'discussions',
+            Component: Discussions,
+          },
+          {
+            path: 'discussions/create',
+            Component: CreatePost,
+          },
+          {
+            path: 'discussions/:id',
+            Component: PostDetails,
+          },
+          {
+            path: 'chat/:communityId?',
+            Component: Chat,
+          },
+          {
+            path: 'events',
+            Component: Events,
+          },
+          {
+            path: 'events/create',
+            Component: CreateEvent,
+          },
+          {
+            path: 'events/:id',
+            Component: EventDetails,
+          },
+          {
+            path: 'profile',
+            Component: Profile,
+          },
+          {
+            path: 'students/:id',
+            Component: StudentProfile,
+          },
+        ],
       },
     ],
   },
   // University Admin Routes
   {
-    path: '/university-admin',
-    Component: UniversityAdminLayout,
+    Component: UniversityAdminGuard,
     children: [
       {
-        index: true,
-        Component: UniversityDashboard,
-      },
-      {
-        path: 'communities',
-        Component: CommunityManagement,
-      },
-      {
-        path: 'posts',
-        Component: PostApproval,
-      },
-      {
-        path: 'reports',
-        Component: ReportedPosts,
+        path: '/university-admin',
+        Component: UniversityAdminLayout,
+        children: [
+          {
+            index: true,
+            Component: UniversityDashboard,
+          },
+          {
+            path: 'communities',
+            Component: CommunityManagement,
+          },
+          {
+            path: 'posts',
+            Component: PostApproval,
+          },
+          {
+            path: 'reports',
+            Component: ReportedPosts,
+          },
+        ],
       },
     ],
   },
   // System Admin Routes
   {
-    path: '/system-admin',
-    Component: SystemAdminLayout,
+    Component: SystemAdminGuard,
     children: [
       {
-        index: true,
-        Component: SystemDashboard,
-      },
-      {
-        path: 'universities',
-        Component: UniversityManagement,
-      },
-      {
-        path: 'admins',
-        Component: AdminManagement,
+        path: '/system-admin',
+        Component: SystemAdminLayout,
+        children: [
+          {
+            index: true,
+            Component: SystemDashboard,
+          },
+          {
+            path: 'universities',
+            Component: UniversityManagement,
+          },
+          {
+            path: 'admins',
+            Component: AdminManagement,
+          },
+        ],
       },
     ],
   },
