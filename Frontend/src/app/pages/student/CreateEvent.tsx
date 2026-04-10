@@ -42,7 +42,7 @@ export default function CreateEvent() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Event Detailssss</CardTitle>
+          <CardTitle>Event Details</CardTitle>
           <CardDescription>Fill in the information for your event</CardDescription>
         </CardHeader>
         <CardContent>
