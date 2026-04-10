@@ -39,6 +39,21 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
 
+  const syncUserToLocalStorage = (nextUser: User | null) => {
+    if (!nextUser) {
+      localStorage.removeItem('userId');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('userUniversity');
+      localStorage.removeItem('userRole');
+      return;
+    }
+
+    localStorage.setItem('userId', nextUser.id || '');
+    localStorage.setItem('userName', nextUser.studentId || nextUser.name || 'Student');
+    localStorage.setItem('userUniversity', nextUser.university || 'default-university');
+    localStorage.setItem('userRole', nextUser.role || 'student');
+  };
+
   const login = (email: string, password: string, role: UserRole = 'student') => {
     // Mock login - in real app, this would call an API
     const mockUser: User = {
@@ -55,6 +70,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       about: 'Passionate about building innovative solutions and collaborating with fellow students.',
     };
     setUser(mockUser);
+    syncUserToLocalStorage(mockUser);
   };
 
   const register = (userData: Partial<User>) => {
@@ -74,15 +90,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       about: '',
     };
     setUser(newUser);
+    syncUserToLocalStorage(newUser);
   };
 
   const logout = () => {
     setUser(null);
+    syncUserToLocalStorage(null);
   };
 
   const updateProfile = (userData: Partial<User>) => {
     if (user) {
-      setUser({ ...user, ...userData });
+      const updatedUser = { ...user, ...userData };
+      setUser(updatedUser);
+      syncUserToLocalStorage(updatedUser);
     }
   };
 

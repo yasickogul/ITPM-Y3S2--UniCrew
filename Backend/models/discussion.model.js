@@ -45,9 +45,10 @@ const discussionSchema = new mongoose.Schema({
     type: String,
     required: true,
     minlength: 10,
-    maxlength: 5000,
+    maxlength: 50000,
     trim: true,
   },
+  images: [String],
   author: {
     type: String,
     required: true,
@@ -66,7 +67,7 @@ const discussionSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['Study Group', 'Project', 'Question', 'Announcement', 'Resource', 'General'],
+    enum: ['Kuppi', 'Programming', 'Projects', 'Events', 'Career', 'General', 'Research', 'Study Group', 'Project', 'Question', 'Announcement', 'Resource'],
     default: 'General',
   },
   tags: [
