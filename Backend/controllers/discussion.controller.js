@@ -32,7 +32,20 @@ const validateContent = (content) => {
 };
 
 const validateCategory = (category) => {
-  const allowedCategories = ['Kuppi', 'Programming', 'Projects', 'Events', 'Career', 'General', 'Research'];
+  const allowedCategories = [
+    'Kuppi',
+    'Programming',
+    'Projects',
+    'Events',
+    'Career',
+    'General',
+    'Research',
+    'Study Group',
+    'Project',
+    'Question',
+    'Announcement',
+    'Resource',
+  ];
   if (!category || !allowedCategories.includes(category)) {
     return 'Invalid category selected';
   }
@@ -52,7 +65,7 @@ const validateCommentContent = (content) => {
 // Create a new discussion
 exports.createDiscussion = async (req, res) => {
   try {
-    const { title, content, communityId, communityName, category, tags } = req.body;
+    const { title, content, communityId, communityName, category, tags, images } = req.body;
     const { 'x-user-id': userId, 'x-user-name': userName } = req.headers;
 
     // Validation
@@ -86,6 +99,7 @@ exports.createDiscussion = async (req, res) => {
     const newDiscussion = new Discussion({
       title: title.trim(),
       content: content.trim(),
+      images: images || [],
       author: userName || 'Anonymous',
       authorId: userId || 'unknown',
       communityId,

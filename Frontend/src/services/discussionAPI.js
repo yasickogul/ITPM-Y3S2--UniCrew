@@ -255,8 +255,8 @@ export const discussionAPI = {
 
     if (!data.content || data.content.length < 10) {
       errors.content = 'Content must be at least 10 characters';
-    } else if (data.content.length > 5000) {
-      errors.content = 'Content must not exceed 5000 characters';
+    } else if (data.content.length > 50000) {
+      errors.content = 'Content must not exceed 50000 characters';
     }
 
     const validCategories = ['Kuppi', 'Programming', 'Projects', 'Events', 'Career', 'General', 'Research'];
