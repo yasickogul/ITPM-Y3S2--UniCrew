@@ -2,12 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'sonner';
-import { ArrowLeft, Sparkles, Send, FileText, Image as ImageIcon, Code, Type, Eye, Edit3, Plus } from 'lucide-react';
+import { ArrowLeft, Send, Image as ImageIcon, Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
 import { Input } from '../../components/ui/input';
 import { mockCommunities } from '../../data/mockData';
-import { aiAPI } from '../../../services/aiAPI';
 import { discussionAPI } from '../../../services/discussionAPI';
 
 export default function CreatePost() {
@@ -21,10 +20,11 @@ export default function CreatePost() {
   });
 
   const [contentHtml, setContentHtml] = useState('');
+  const [images, setImages] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const editorRef = useState<HTMLDivElement | null>(null)[0];
 
   let titleError = "";
+  // (validation logic remains same)
   if (formData.title.length > 0) {
     if (formData.title.trim().length < 5) {
       titleError = "Title must be at least 5 characters.";
@@ -51,77 +51,6 @@ export default function CreatePost() {
     }
   }
 
-  const handleEnhance = () => {
-    const text = document.getElementById('rich-editor')?.innerText || "";
-    if (!text.trim()) {
-      toast.error('Please write some content first!');
-      return;
-    }
-    toast.promise(
-      new Promise(resolve => setTimeout(() => {
-        const categoryLabel = formData.category || 'academic';
-
-        // Professional AI Rewrite Logic
-        const lines = text.split('\n').filter(l => l.trim() && !l.includes('Professional Draft'));
-        const intro = `I am writing to seek collaboration regarding ${categoryLabel}. `;
-        const professionalText = `
-          <div class="p-6 bg-white border-2 border-indigo-100 rounded-2xl shadow-sm my-4">
-            <p class="text-indigo-600 font-bold mb-2">✨ AI Professional Draft</p>
-            <p class="mb-4">${intro}</p>
-            <ul class="list-disc pl-5 space-y-2 mb-4">
-              ${lines.map(l => `<li>${l}</li>`).join('')}
-            </ul>
-            <p>Looking forward to the community's insights.</p>
-          </div>
-          <p><br/></p>
-        `;
-
-        const editor = document.getElementById('rich-editor');
-        if (editor) {
-          editor.innerHTML = professionalText;
-          setContentHtml(editor.innerHTML);
-        }
-
-        resolve(true);
-      }, 2000)),
-      {
-        loading: 'AI is analyzing your content...',
-        success: 'Post magically enhanced!',
-        error: 'Failed to enhance.'
-      }
-    );
-  };
-
-  // Toolbar action helpers
-
-  const handleToolbarAction = (type: 'bold' | 'italic' | 'code' | 'image') => {
-    const editor = document.getElementById('rich-editor');
-    if (!editor) return;
-
-    editor.focus();
-
-    if (type === 'bold') {
-      document.execCommand('bold', false);
-    } else if (type === 'italic') {
-      document.execCommand('italic', false);
-    } else if (type === 'code') {
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        const codeBlock = document.createElement('pre');
-        codeBlock.className = 'bg-gray-900 text-gray-100 p-4 rounded-xl my-4 font-mono text-sm overflow-x-auto';
-        codeBlock.innerHTML = selection.toString() || 'code here';
-        range.deleteContents();
-        range.insertNode(codeBlock);
-      }
-    } else if (type === 'image') {
-      document.getElementById('photo-upload')?.click();
-    }
-
-    // Sync state
-    setContentHtml(editor.innerHTML);
-  };
-
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -131,53 +60,27 @@ export default function CreatePost() {
       return;
     }
 
-    toast.promise(
-      new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const base64 = event.target?.result as string;
-          const imgHtml = `<div class="my-4 relative group inline-block max-w-full">
-            <img 
-              src="${base64}" 
-              class="rounded-xl shadow-sm max-w-full max-h-[300px] h-auto border-2 border-white transition-all cursor-default" 
-              alt="Uploaded photo"
-            />
-            <button 
-              type="button"
-              onclick="this.parentElement.remove()"
-              class="absolute top-3 right-3 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-lg hover:bg-red-600 scale-90 group-hover:scale-100"
-              title="Delete Photo"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-            </button>
-          </div><p><br/></p>`;
+    if (images.length >= 4) {
+      toast.error('Maximum 4 photos allowed per post.');
+      return;
+    }
 
-          const editor = document.getElementById('rich-editor');
-          if (editor) {
-            // Correctly append the image to the end of the content
-            const space = editor.innerHTML.trim().length > 0 ? '<p><br/></p>' : '';
-            editor.innerHTML = editor.innerHTML + space + imgHtml;
-            setContentHtml(editor.innerHTML);
-
-            // Auto-scroll to bottom
-            setTimeout(() => {
-              editor.scrollTop = editor.scrollHeight;
-            }, 100);
-          }
-          resolve(true);
-        };
-        reader.onerror = () => reject();
-        reader.readAsDataURL(file);
-      }),
-      {
-        loading: 'Uploading your photo...',
-        success: 'Your actual photo added to the post!',
-        error: 'Upload failed',
-      }
-    );
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      setImages(prev => [...prev, base64]);
+      toast.success('Photo added to gallery!');
+    };
+    reader.readAsDataURL(file);
+    // Reset input
+    e.target.value = '';
   };
 
-  const hasContent = plainContent.length > 0 || contentHtml.includes('<img');
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const hasContent = plainContent.length > 0 || images.length > 0;
 
   const isFormValid =
     formData.title.trim().length > 0 && titleError === "" &&
@@ -199,32 +102,40 @@ export default function CreatePost() {
 
     setIsSubmitting(true);
     try {
-      const plainText = document.getElementById('rich-editor')?.innerText || "";
+      const selectedCommunity = mockCommunities.find((community) => community.id === formData.community);
 
-      // 1. AI Moderation Filter
-      const moderation = await aiAPI.checkModeration(formData.title, plainText).catch(() => null);
-
-      if (moderation && (moderation.isFlagged || moderation.severity >= 2 || (moderation.issues && moderation.issues.length > 0))) {
-        toast.error("Your post was filtered: it contains inappropriate content.");
-        setIsSubmitting(false);
+      if (!selectedCommunity) {
+        toast.error('Please select a valid community.');
         return;
       }
 
-      // 2. Submit to backend
-      const selectedCommunityObj = mockCommunities.find(c => c.id === formData.community);
+      if (user?.id) {
+        localStorage.setItem('userId', user.id);
+      }
+      if (user?.studentId || user?.name) {
+        localStorage.setItem('userName', user?.studentId || user?.name || 'Student');
+      }
+      if (user?.university) {
+        localStorage.setItem('userUniversity', user.university);
+      }
+      if (user?.role) {
+        localStorage.setItem('userRole', user.role);
+      }
 
-      await discussionAPI.createDiscussion({
-        title: formData.title,
-        content: contentHtml, // Store as HTML
-        category: formData.category,
+      const payload = {
+        title: formData.title.trim(),
+        content: contentHtml.trim(),
         communityId: formData.community,
-        communityName: selectedCommunityObj?.name || 'Unknown Community'
-      });
+        communityName: selectedCommunity.name,
+        category: formData.category,
+        images,
+      };
 
-      toast.success("Post published successfully!");
+      const response = await discussionAPI.createDiscussion(payload);
+      toast.success(response.message || 'Post published successfully!');
       navigate('/discussions');
-    } catch (err) {
-      toast.error("Failed to publish post");
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to publish post. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -318,7 +229,7 @@ export default function CreatePost() {
                 </div>
                 <div className="relative">
                   <Input
-                    placeholder="E.g., Question about upcoming final exam format"
+                    placeholder="Enter your discussion title..."
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     className={`h-14 bg-[#F8FAFC] border-none rounded-2xl px-5 text-[#1E293B] font-bold text-[15px] placeholder:text-[#94A3B8] focus-visible:ring-2 focus-visible:ring-indigo-100 shadow-inner ${titleError ? 'ring-2 ring-red-200 bg-red-50' : ''}`}
@@ -331,16 +242,54 @@ export default function CreatePost() {
               </div>
 
               <div>
-                <div className="flex justify-between items-center mb-2 ml-1">
-                  <div className="flex items-center gap-2">
-                    <label className="block text-sm font-bold text-[#1E293B]">Question</label>
-                    {contentError && <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100 shadow-sm">{contentError}</span>}
-                  </div>
-                  <button type="button" onClick={handleEnhance} className="text-xs font-bold text-white flex items-center gap-1.5 transition-all bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-2 rounded-xl shadow-lg shadow-indigo-200 hover:shadow-indigo-300 hover:scale-105 active:scale-95">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    AI Enhance
-                  </button>
+                <div className="flex items-center gap-2 mb-2 ml-1">
+                  <label className="block text-sm font-bold text-[#1E293B]">Question</label>
+                  {contentError && <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100 shadow-sm">{contentError}</span>}
                 </div>
+
+                {/* Proper Photo Gallery Preview */}
+                <AnimatePresence>
+                  {images.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="flex gap-4 mb-6 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-indigo-100"
+                    >
+                      {images.map((img, idx) => (
+                        <motion.div
+                          key={idx}
+                          initial={{ scale: 0.8, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          className="relative flex-shrink-0 group"
+                        >
+                          <img
+                            src={img}
+                            alt={`Upload ${idx}`}
+                            className="w-24 h-24 object-cover rounded-2xl shadow-sm border-2 border-white ring-1 ring-gray-100"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeImage(idx)}
+                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-red-600"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </motion.div>
+                      ))}
+                      {images.length < 4 && (
+                        <button
+                          type="button"
+                          onClick={() => document.getElementById('photo-upload')?.click()}
+                          className="w-24 h-24 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-gray-400 hover:border-indigo-300 hover:text-indigo-500 transition-all bg-gray-50/50"
+                        >
+                          <Plus className="w-6 h-6 mb-1" />
+                          <span className="text-[10px] font-bold">Add More</span>
+                        </button>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 <div className={`bg-[#F8FAFC]/50 backdrop-blur-sm rounded-[2rem] border overflow-hidden transition-all duration-300 ${contentError ? 'border-rose-300 ring-2 ring-rose-100 shadow-[inset_0_2px_10px_rgba(244,63,94,0.08)]' : 'border-gray-100 shadow-inner'}`}>
                   <div className="bg-white/50 backdrop-blur-sm border-b border-gray-100 p-2 flex gap-4 items-center px-6 h-14">
@@ -353,7 +302,7 @@ export default function CreatePost() {
                     />
                     <button type="button" onClick={() => document.getElementById('photo-upload')?.click()} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-indigo-600 font-bold hover:bg-indigo-50 transition-all border border-indigo-100 shadow-sm text-xs" title="Add Image">
                       <ImageIcon className="w-3.5 h-3.5" />
-                      <span>Add Photo</span>
+                      <span>{images.length > 0 ? 'Add More' : 'Add Photo'}</span>
                     </button>
                   </div>
 
@@ -363,7 +312,7 @@ export default function CreatePost() {
                     onInput={(e) => setContentHtml(e.currentTarget.innerHTML)}
                     onBlur={(e) => setContentHtml(e.currentTarget.innerHTML)}
                     className={`w-full min-h-[350px] px-6 py-6 text-[#475569] font-medium outline-none text-[15px] leading-relaxed relative empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 empty:before:pointer-events-none`}
-                    data-placeholder="Share your thoughts, ask a question, or attach an image..."
+                    data-placeholder="Share your thoughts or ask a question..."
                   />
                 </div>
               </div>
