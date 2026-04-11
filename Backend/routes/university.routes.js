@@ -10,20 +10,21 @@ const {
   updateUniversity,
   deleteUniversity,
 } = require("../controllers/university.controller");
+const { authenticate, authorizeRoles } = require("../middleware/auth.middleware");
 
-// POST → Add University
-router.post("/", createUniversity);
-
-// GET → Read all universities
+// GET → Read all universities (public for dropdowns / listings)
 router.get("/", getUniversities);
+
+// POST → Add University (system admin only)
+router.post("/", authenticate, authorizeRoles("system_admin"), createUniversity);
 
 // GET → Read one university by ID
 router.get("/:id", getUniversityById);
 
-// PUT → Update university by ID
-router.put("/:id", updateUniversity);
+// PUT → Update university by ID (system admin only)
+router.put("/:id", authenticate, authorizeRoles("system_admin"), updateUniversity);
 
-// DELETE → Remove university by ID
-router.delete("/:id", deleteUniversity);
+// DELETE → Remove university by ID (system admin only)
+router.delete("/:id", authenticate, authorizeRoles("system_admin"), deleteUniversity);
 
 module.exports = router;

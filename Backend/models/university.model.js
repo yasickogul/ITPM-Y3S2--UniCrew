@@ -13,6 +13,12 @@ const universitySchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    description: {
+      type: String,
+      default: "",
+      maxlength: 5000,
+      trim: true,
+    },
   },
   { timestamps: true }
 );

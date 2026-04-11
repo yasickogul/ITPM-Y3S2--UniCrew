@@ -7,7 +7,7 @@ const normalizeRole = (roleValue = "") => {
   return role;
 };
 
-exports.authenticate = (req, res, next) => {
+function authenticate(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -25,12 +25,16 @@ exports.authenticate = (req, res, next) => {
   } catch (_error) {
     return res.status(401).json({ message: "Unauthorized" });
   }
-};
+}
 
-exports.authorizeRoles = (...allowedRoles) => (req, res, next) => {
-  const normalizedAllowed = allowedRoles.map((role) => normalizeRole(role));
-  if (!req.user || !normalizedAllowed.includes(normalizeRole(req.user.role))) {
-    return res.status(403).json({ message: "Forbidden: insufficient permissions" });
-  }
-  return next();
-};
+function authorizeRoles(...allowedRoles) {
+  return (req, res, next) => {
+    const normalizedAllowed = allowedRoles.map((role) => normalizeRole(role));
+    if (!req.user || !normalizedAllowed.includes(normalizeRole(req.user.role))) {
+      return res.status(403).json({ message: "Forbidden: insufficient permissions" });
+    }
+    return next();
+  };
+}
+
+module.exports = { authenticate, authorizeRoles };

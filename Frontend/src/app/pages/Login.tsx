@@ -82,7 +82,6 @@ export default function Login() {
           <Card>
             <CardHeader>
               <CardTitle>Welcome Back</CardTitle>
-              <CardDescription>Single login for Student, University Admin, and System Admin</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -117,12 +116,6 @@ export default function Login() {
                 <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600">
                   Sign In
                 </Button>
-
-                <div className="rounded-lg border bg-gray-50 p-3 text-xs text-gray-700 space-y-1">
-                  <p className="font-medium">Credential Source</p>
-                  <p>Login now uses backend credentials from the `users` collection.</p>
-                  <p>System Admin should use the seeded account you created in MongoDB.</p>
-                </div>
 
                 <div className="text-center">
                   <a href="#" className="text-sm text-blue-600 hover:underline">

@@ -7,7 +7,7 @@ const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
 // CREATE UNIVERSITY
 exports.createUniversity = async (req, res) => {
   try {
-    const { name, domain, emailDomain } = req.body;
+    const { name, domain, emailDomain, description } = req.body;
     const normalizedDomain = String(domain || emailDomain || "")
       .trim()
       .toLowerCase()
@@ -19,9 +19,15 @@ exports.createUniversity = async (req, res) => {
       });
     }
 
+    const desc =
+      description !== undefined && description !== null
+        ? String(description).trim().slice(0, 5000)
+        : "";
+
     const university = await University.create({
       name: String(name).trim(),
       domain: normalizedDomain,
+      description: desc,
     });
 
     res.status(201).json({
@@ -91,13 +97,14 @@ exports.getUniversityById = async (req, res) => {
 exports.updateUniversity = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, domain, emailDomain } = req.body;
-    const normalizedDomain = domain || emailDomain
-      ? String(domain || emailDomain)
-          .trim()
-          .toLowerCase()
-          .replace(/^@/, "")
-      : undefined;
+    const { name, domain, emailDomain, description } = req.body;
+    const normalizedDomain =
+      domain !== undefined || emailDomain !== undefined
+        ? String(domain || emailDomain || "")
+            .trim()
+            .toLowerCase()
+            .replace(/^@/, "")
+        : undefined;
 
     if (!isValidId(id)) {
       return res.status(400).json({
@@ -105,18 +112,31 @@ exports.updateUniversity = async (req, res) => {
       });
     }
 
-    if (!name && !normalizedDomain) {
+    const hasDescription = Object.prototype.hasOwnProperty.call(req.body, "description");
+
+    if (!name && normalizedDomain === undefined && !hasDescription) {
       return res.status(400).json({
         message: "At least one field is required to update",
       });
     }
 
     const updateData = {};
-    if (name) {
+    if (name !== undefined && name !== null && String(name).trim() !== "") {
       updateData.name = String(name).trim();
     }
-    if (normalizedDomain) {
+    if (normalizedDomain !== undefined && normalizedDomain !== "") {
       updateData.domain = normalizedDomain;
+    }
+    if (hasDescription) {
+      updateData.description = String(description ?? "")
+        .trim()
+        .slice(0, 5000);
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        message: "No valid fields to update",
+      });
     }
 
     const university = await University.findByIdAndUpdate(
