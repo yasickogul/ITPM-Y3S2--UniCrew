@@ -17,7 +17,8 @@ app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-// MongoDB Connection
+// MongoDB 
+console.log(process.env.MONGO_)
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("Database is connected."))
