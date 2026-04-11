@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 export type UserRole = 'student' | 'university_admin' | 'system_admin' | null;
 
@@ -39,15 +39,21 @@ export const useAuth = () => {
   return context;
 };
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+function readStoredUser(): User | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as User;
+    if (!parsed?.id || !parsed?.email || !parsed?.role) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
 
-  useEffect(() => {
-    const savedUser = localStorage.getItem(AUTH_STORAGE_KEY);
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-  }, []);
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<User | null>(readStoredUser);
 
   const login = async (email: string, password: string) => {
     try {
