@@ -8,6 +8,7 @@ const universityAdminRoutes = require("./routes/universityAdmin.routes");
 const discussionRoutes = require("./routes/discussion.routes");
 const aiRoutes = require("./routes/ai.routes");
 const authRoutes = require("./routes/auth.routes");
+const systemAdminRoutes = require("./routes/systemAdmin.routes");
 
 const app = express();
 const PORT = process.env.PORT || 5050;
@@ -24,6 +25,7 @@ mongoose
 
 // Routes
 app.use("/api/universities", universityRoutes);
+app.use("/api/system-admin", systemAdminRoutes);
 app.use("/api/system-admin/university-admins", universityAdminRoutes);
 app.use("/api/discussions", discussionRoutes);
 app.use("/api/ai", aiRoutes);

@@ -124,3 +124,130 @@ exports.getUniversityAdmins = async (_req, res) => {
     });
   }
 };
+
+exports.updateUniversityAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fullName, email, assignedUniversity, status } = req.body;
+
+    if (!isValidId(id)) {
+      return res.status(400).json({ message: "Invalid admin id" });
+    }
+
+    const admin = await UniversityAdmin.findById(id);
+    if (!admin) {
+      return res.status(404).json({ message: "University admin not found" });
+    }
+
+    const prevEmail = admin.email;
+
+    if (fullName !== undefined && fullName !== null) {
+      const name = String(fullName).trim();
+      if (!name) {
+        return res.status(400).json({ message: "Full name cannot be empty" });
+      }
+      admin.fullName = name;
+    }
+
+    let newEmail = prevEmail;
+    if (email !== undefined && email !== null) {
+      newEmail = String(email).trim().toLowerCase();
+      if (!EMAIL_REGEX.test(newEmail)) {
+        return res.status(400).json({ message: "Invalid email address" });
+      }
+      if (newEmail !== prevEmail) {
+        const dupAdmin = await UniversityAdmin.findOne({ email: newEmail, _id: { $ne: id } });
+        const dupUser = await User.findOne({ email: newEmail });
+        if (dupAdmin || dupUser) {
+          return res.status(409).json({ message: "Email is already in use" });
+        }
+        admin.email = newEmail;
+      }
+    }
+
+    if (assignedUniversity !== undefined && assignedUniversity !== null) {
+      if (!isValidId(assignedUniversity)) {
+        return res.status(400).json({ message: "Invalid university id" });
+      }
+      const university = await University.findById(assignedUniversity);
+      if (!university) {
+        return res.status(404).json({ message: "Assigned university not found" });
+      }
+      admin.university = assignedUniversity;
+    }
+
+    if (status !== undefined && status !== null) {
+      const s = String(status).trim();
+      if (!["Active", "Inactive"].includes(s)) {
+        return res.status(400).json({ message: "Status must be Active or Inactive" });
+      }
+      admin.status = s;
+    }
+
+    await admin.save();
+
+    const user = await User.findOne({
+      email: prevEmail,
+      role: { $regex: /^university_admin$/i },
+    });
+
+    if (user) {
+      if (fullName !== undefined && fullName !== null) {
+        user.fullName = String(fullName).trim();
+      }
+      if (newEmail !== prevEmail) {
+        user.email = newEmail;
+      }
+      if (assignedUniversity !== undefined && assignedUniversity !== null) {
+        user.university = assignedUniversity;
+      }
+      if (status !== undefined && status !== null) {
+        user.status = admin.status;
+      }
+      await user.save();
+    }
+
+    const populated = await UniversityAdmin.findById(admin._id).populate("university", "name domain");
+
+    return res.status(200).json({
+      message: "University admin updated successfully",
+      data: populated,
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({ message: "Email is already in use" });
+    }
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+exports.deleteUniversityAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!isValidId(id)) {
+      return res.status(400).json({ message: "Invalid admin id" });
+    }
+
+    const admin = await UniversityAdmin.findById(id);
+    if (!admin) {
+      return res.status(404).json({ message: "University admin not found" });
+    }
+
+    const email = admin.email;
+
+    await User.deleteMany({
+      email,
+      role: { $regex: /^university_admin$/i },
+    });
+
+    await UniversityAdmin.findByIdAndDelete(id);
+
+    return res.status(200).json({
+      message: "University admin deleted successfully",
+      data: { id, email },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
