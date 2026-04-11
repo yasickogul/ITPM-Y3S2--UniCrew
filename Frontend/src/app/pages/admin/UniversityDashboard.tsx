@@ -1,8 +1,33 @@
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
-import { Users, FileCheck, Flag, MessageSquare } from 'lucide-react';
+import { Button } from '../../components/ui/button';
+import { Users, FileCheck, Flag, MessageSquare, Calendar } from 'lucide-react';
+import { eventService } from '../../services/api';
 import { mockPendingPosts, mockReportedPosts, mockCommunities } from '../../data/mockData';
+import { toast } from 'sonner';
 
 export default function UniversityDashboard() {
+  const [pendingEventsCount, setPendingEventsCount] = useState(0);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(true);
+
+  useEffect(() => {
+    fetchPendingEventsCount();
+  }, []);
+
+  const fetchPendingEventsCount = async () => {
+    try {
+      setIsLoadingEvents(true);
+      const events = await eventService.getPending();
+      setPendingEventsCount(Array.isArray(events) ? events.length : 0);
+    } catch (error) {
+      console.error('Error fetching pending events:', error);
+      setPendingEventsCount(0);
+    } finally {
+      setIsLoadingEvents(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -12,6 +37,20 @@ export default function UniversityDashboard() {
 
       {/* Stats Cards */}
       <div className="grid md:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Events</CardTitle>
+            <Calendar className="w-4 h-4 text-yellow-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pendingEventsCount}</div>
+            <p className="text-xs text-gray-600">Awaiting approval</p>
+            <Link to="/university-admin/events/approval" className="mt-2">
+              <Button size="sm" variant="outline" className="w-full">Review Events</Button>
+            </Link>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Posts</CardTitle>
@@ -42,17 +81,6 @@ export default function UniversityDashboard() {
           <CardContent>
             <div className="text-2xl font-bold">{mockCommunities.length}</div>
             <p className="text-xs text-gray-600">Active communities</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="w-4 h-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">2,450</div>
-            <p className="text-xs text-gray-600">Registered students</p>
           </CardContent>
         </Card>
       </div>

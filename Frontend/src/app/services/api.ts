@@ -16,13 +16,23 @@ api.interceptors.response.use(
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
+      // Don't try to refresh auth endpoints themselves
+      if (
+        originalRequest.url.includes("/auth/me") ||
+        originalRequest.url.includes("/auth/login") ||
+        originalRequest.url.includes("/auth/register") ||
+        originalRequest.url.includes("/auth/refresh")
+      ) {
+        return Promise.reject(error);
+      }
+
       originalRequest._retry = true;
 
       try {
         await api.post("/auth/refresh");
         return api(originalRequest);
       } catch (refreshError) {
-        window.location.href = "/login";
+        // Don't redirect - let the app handle auth state through Zustand
         return Promise.reject(refreshError);
       }
     }
@@ -34,7 +44,7 @@ api.interceptors.response.use(
 export const authService = {
   login: async (email: string, password: string, role?: string) => {
     const response = await api.post("/auth/login", { email, password, role });
-    return response.data;
+    return response.data.data.user;
   },
 
   register: async (userData: {
@@ -50,22 +60,22 @@ export const authService = {
     universityId?: string;
   }) => {
     const response = await api.post("/auth/register", userData);
-    return response.data;
+    return response.data.data.user;
   },
 
   logout: async () => {
     const response = await api.post("/auth/logout");
-    return response.data;
+    return response.data.data;
   },
 
   getMe: async () => {
     const response = await api.get("/auth/me");
-    return response.data;
+    return response.data.data;
   },
 
   getProfile: async () => {
     const response = await api.get("/auth/profile");
-    return response.data;
+    return response.data.data;
   },
 
   updateProfile: async (userData: Partial<{
@@ -78,7 +88,7 @@ export const authService = {
     about: string;
   }>) => {
     const response = await api.put("/auth/profile", userData);
-    return response.data;
+    return response.data.data;
   },
 
   changePassword: async (currentPassword: string, newPassword: string) => {
@@ -86,45 +96,45 @@ export const authService = {
       currentPassword,
       newPassword,
     });
-    return response.data;
+    return response.data.data;
   },
 };
 
 export const universityService = {
   getAll: async () => {
     const response = await api.get("/universities");
-    return response.data;
+    return response.data.data;
   },
   getById: async (id: string) => {
     const response = await api.get(`/universities/${id}`);
-    return response.data;
+    return response.data.data;
   },
   create: async (data: { name: string; email: string; domain: string }) => {
     const response = await api.post("/universities", data);
-    return response.data;
+    return response.data.data;
   },
   update: async (id: string, data: Partial<{ name: string; email: string; domain: string }>) => {
     const response = await api.put(`/universities/${id}`, data);
-    return response.data;
+    return response.data.data;
   },
   delete: async (id: string) => {
     const response = await api.delete(`/universities/${id}`);
-    return response.data;
+    return response.data.data;
   },
 };
 
 export const communityService = {
   getAll: async (params?: { universityId?: string; faculty?: string; search?: string }) => {
     const response = await api.get("/communities", { params });
-    return response.data;
+    return response.data.data;
   },
   getById: async (id: string) => {
     const response = await api.get(`/communities/${id}`);
-    return response.data;
+    return response.data.data;
   },
   getMyCommunities: async () => {
     const response = await api.get("/communities/my");
-    return response.data;
+    return response.data.data;
   },
   create: async (data: {
     name: string;
@@ -136,7 +146,7 @@ export const communityService = {
     universityName: string;
   }) => {
     const response = await api.post("/communities", data);
-    return response.data;
+    return response.data.data;
   },
   update: async (id: string, data: Partial<{
     name: string;
@@ -146,34 +156,34 @@ export const communityService = {
     banner: string;
   }>) => {
     const response = await api.put(`/communities/${id}`, data);
-    return response.data;
+    return response.data.data;
   },
   delete: async (id: string) => {
     const response = await api.delete(`/communities/${id}`);
-    return response.data;
+    return response.data.data;
   },
   join: async (id: string) => {
     const response = await api.post(`/communities/${id}/join`);
-    return response.data;
+    return response.data.data;
   },
   leave: async (id: string) => {
     const response = await api.post(`/communities/${id}/leave`);
-    return response.data;
+    return response.data.data;
   },
 };
 
 export const eventService = {
   getAll: async (params?: { communityId?: string; status?: string; search?: string }) => {
     const response = await api.get("/events", { params });
-    return response.data;
+    return response.data.data;
   },
   getUpcoming: async () => {
     const response = await api.get("/events/upcoming");
-    return response.data;
+    return response.data.data;
   },
   getById: async (id: string) => {
     const response = await api.get(`/events/${id}`);
-    return response.data;
+    return response.data.data;
   },
   create: async (data: {
     title: string;
@@ -188,7 +198,7 @@ export const eventService = {
     googleFormUrl?: string;
   }) => {
     const response = await api.post("/events", data);
-    return response.data;
+    return response.data.data;
   },
   update: async (id: string, data: Partial<{
     title: string;
@@ -200,11 +210,46 @@ export const eventService = {
     status: string;
   }>) => {
     const response = await api.put(`/events/${id}`, data);
-    return response.data;
+    return response.data.data;
   },
   delete: async (id: string) => {
     const response = await api.delete(`/events/${id}`);
-    return response.data;
+    return response.data.data;
+  },
+  getPending: async () => {
+    const response = await api.get("/events/admin/pending");
+    return response.data.data;
+  },
+  approve: async (id: string) => {
+    const response = await api.put(`/events/${id}/approve`);
+    return response.data.data;
+  },
+  decline: async (id: string, reason: string) => {
+    const response = await api.put(`/events/${id}/decline`, { reason });
+    return response.data.data;
+  },
+};
+
+export const adminService = {
+  getUsers: async (params?: { universityId?: string; role?: string; search?: string }) => {
+    const response = await api.get("/admin/users", { params });
+    return response.data.data;
+  },
+  getStats: async () => {
+    const response = await api.get("/admin/stats");
+    return response.data.data;
+  },
+  deactivateUser: async (id: string) => {
+    const response = await api.put(`/admin/users/${id}/deactivate`);
+    return response.data.data;
+  },
+  activateUser: async (id: string) => {
+    const response = await api.put(`/admin/users/${id}/activate`);
+    return response.data.data;
+  },
+  changeUserRole: async (id: string, role: string) => {
+    const response = await api.put(`/admin/users/${id}/role`, { role });
+    return response.data.data;
   },
 };
 

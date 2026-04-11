@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
-import { LayoutDashboard, Users, FileCheck, Flag, LogOut, Menu, X, Shield } from 'lucide-react';
+import { LayoutDashboard, Users, FileCheck, Flag, LogOut, Menu, X, Shield, Calendar } from 'lucide-react';
 import { useState } from 'react';
 
 export default function UniversityAdminLayout() {
@@ -28,6 +28,7 @@ export default function UniversityAdminLayout() {
     { path: '/university-admin', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/university-admin/communities', icon: Users, label: 'Communities' },
     { path: '/university-admin/posts', icon: FileCheck, label: 'Post Approval' },
+    { path: '/university-admin/events/approval', icon: Calendar, label: 'Event Approval' },
     { path: '/university-admin/reports', icon: Flag, label: 'Reported Posts' },
   ];
 

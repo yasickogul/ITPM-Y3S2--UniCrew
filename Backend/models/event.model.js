@@ -50,6 +50,15 @@ const eventSchema = new mongoose.Schema(
       enum: ["upcoming", "ongoing", "completed", "cancelled"],
       default: "upcoming",
     },
+    approvalStatus: {
+      type: String,
+      enum: ["pending", "approved", "declined"],
+      default: "pending",
+    },
+    declineReason: {
+      type: String,
+      default: "",
+    },
   },
   { timestamps: true }
 );

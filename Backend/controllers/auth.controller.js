@@ -13,46 +13,51 @@ const generateTokens = (user) => {
 const setCookies = (res, user) => {
   const { token, refreshToken } = generateTokens(user);
   
+  const cookieOptions = {
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    path: "/",
+  };
+
   res.cookie("token", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000,
-    path: "/",
+    ...cookieOptions,
   });
   
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
     maxAge: 30 * 24 * 60 * 60 * 1000,
-    path: "/",
+    ...cookieOptions,
   });
 
   res.cookie("userRole", user.role, {
     httpOnly: false,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000,
-    path: "/",
+    ...cookieOptions,
   });
 
   res.cookie("userId", user._id.toString(), {
     httpOnly: false,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000,
-    path: "/",
+    ...cookieOptions,
   });
 
   return { token, refreshToken };
 };
 
 const clearCookies = (res) => {
-  res.cookie("token", "", { httpOnly: true, expires: new Date(0), path: "/" });
-  res.cookie("refreshToken", "", { httpOnly: true, expires: new Date(0), path: "/" });
-  res.cookie("userRole", "", { httpOnly: false, expires: new Date(0), path: "/" });
-  res.cookie("userId", "", { httpOnly: false, expires: new Date(0), path: "/" });
+  const cookieOptions = {
+    expires: new Date(0),
+    path: "/",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    secure: process.env.NODE_ENV === "production",
+  };
+
+  res.cookie("token", "", { httpOnly: true, ...cookieOptions });
+  res.cookie("refreshToken", "", { httpOnly: true, ...cookieOptions });
+  res.cookie("userRole", "", { httpOnly: false, ...cookieOptions });
+  res.cookie("userId", "", { httpOnly: false, ...cookieOptions });
 };
 
 exports.register = async (req, res) => {
@@ -214,6 +219,12 @@ exports.refreshToken = async (req, res) => {
 
 exports.getMe = async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({
+        message: "Not authenticated",
+      });
+    }
+
     const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({

@@ -1,5 +1,4 @@
-import { useEffect } from "react";
-import { Navigate, useLocation } from "react-router";
+import { Navigate, useLocation, Outlet } from "react-router";
 import { useAuthStore, UserRole } from "../stores/authStore";
 
 interface ProtectedRouteProps {
@@ -8,14 +7,10 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading, user, checkAuth } = useAuthStore();
+  const { isAuthenticated, isLoading, user } = useAuthStore();
   const location = useLocation();
 
-  useEffect(() => {
-    if (!isAuthenticated && !isLoading) {
-      checkAuth();
-    }
-  }, [isAuthenticated, isLoading, checkAuth]);
+  // Don't retry auth check - let AuthInitializer handle it once
 
   if (isLoading) {
     return (
@@ -30,24 +25,25 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   }
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    const redirectPath = 
+    const redirectPath =
       user.role === "system_admin" ? "/system-admin" :
       user.role === "university_admin" ? "/university-admin" :
       "/dashboard";
+
+    // Log unauthorized access attempt for debugging
+    console.warn(`Unauthorized access: User role '${user.role}' attempted to access restricted area requiring ${allowedRoles.join(', ')}`);
+
     return <Navigate to={redirectPath} replace />;
   }
 
-  return <>{children}</>;
+  // Use Outlet for nested routes, children for wrapper usage
+  return children ? <>{children}</> : <Outlet />;
 }
 
-export function GuestRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
+export function GuestRoute() {
+  const { isAuthenticated, isLoading } = useAuthStore();
 
-  useEffect(() => {
-    if (!isAuthenticated && !isLoading) {
-      checkAuth();
-    }
-  }, [isAuthenticated, isLoading, checkAuth]);
+  // Don't retry auth check - let AuthInitializer handle it once
 
   if (isLoading) {
     return (
@@ -59,12 +55,12 @@ export function GuestRoute({ children }: { children: React.ReactNode }) {
 
   if (isAuthenticated) {
     const user = useAuthStore.getState().user;
-    const redirectPath = 
+    const redirectPath =
       user?.role === "system_admin" ? "/system-admin" :
       user?.role === "university_admin" ? "/university-admin" :
       "/dashboard";
     return <Navigate to={redirectPath} replace />;
   }
 
-  return <>{children}</>;
+  return <Outlet />;
 }

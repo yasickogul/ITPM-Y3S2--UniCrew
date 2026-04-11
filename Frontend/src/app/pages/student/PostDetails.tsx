@@ -7,12 +7,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar'
 import { Badge } from '../../components/ui/badge';
 import { ArrowLeft, Flag, MessageSquare, Edit, Trash2 } from 'lucide-react';
 import { mockPosts } from '../../data/mockData';
-import { useAuth } from '../../context/AuthContext';
+import { useAuthStore } from '../../stores/authStore';
 
 export default function PostDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const post = mockPosts.find((p) => p.id === id);
   const [newComment, setNewComment] = useState('');
 

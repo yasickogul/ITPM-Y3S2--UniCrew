@@ -52,11 +52,12 @@ const seedData = async () => {
     });
 
     console.log("Seeding university admins...");
+    const hashedAdminPassword = await bcrypt.hash("admin123", 12);
     const uniAdmins = await User.insertMany([
       {
         name: "Harvard Admin",
         email: "admin@harvard.edu",
-        password: "admin123",
+        password: hashedAdminPassword,
         role: "university_admin",
         university: "Harvard University",
         universityId: universities[0]._id,
@@ -64,7 +65,7 @@ const seedData = async () => {
       {
         name: "Stanford Admin",
         email: "admin@stanford.edu",
-        password: "admin123",
+        password: hashedAdminPassword,
         role: "university_admin",
         university: "Stanford University",
         universityId: universities[1]._id,
@@ -72,7 +73,7 @@ const seedData = async () => {
       {
         name: "MIT Admin",
         email: "admin@mit.edu",
-        password: "admin123",
+        password: hashedAdminPassword,
         role: "university_admin",
         university: "MIT",
         universityId: universities[2]._id,
@@ -80,11 +81,12 @@ const seedData = async () => {
     ]);
 
     console.log("Seeding sample students...");
+    const hashedStudentPassword = await bcrypt.hash("student123", 12);
     const students = await User.insertMany([
       {
         name: "John Doe",
         email: "john.doe@harvard.edu",
-        password: "student123",
+        password: hashedStudentPassword,
         role: "student",
         studentId: "STU2024001",
         degree: "Computer Science",
@@ -97,7 +99,7 @@ const seedData = async () => {
       {
         name: "Jane Smith",
         email: "jane.smith@stanford.edu",
-        password: "student123",
+        password: hashedStudentPassword,
         role: "student",
         studentId: "STU2024002",
         degree: "Data Science",
@@ -110,7 +112,7 @@ const seedData = async () => {
       {
         name: "Alex Chen",
         email: "alex.chen@mit.edu",
-        password: "student123",
+        password: hashedStudentPassword,
         role: "student",
         studentId: "STU2024003",
         degree: "Engineering",

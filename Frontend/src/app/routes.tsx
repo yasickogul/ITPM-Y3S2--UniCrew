@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router';
+import { createBrowserRouter, Navigate, Outlet } from 'react-router';
 
 // Layouts
 import StudentLayout from './layouts/StudentLayout';
@@ -29,6 +29,7 @@ import UniversityDashboard from './pages/admin/UniversityDashboard';
 import CommunityManagement from './pages/admin/CommunityManagement';
 import PostApproval from './pages/admin/PostApproval';
 import ReportedPosts from './pages/admin/ReportedPosts';
+import EventApproval from './pages/admin/EventApproval';
 
 // System Admin Pages
 import SystemDashboard from './pages/sysadmin/SystemDashboard';
@@ -37,6 +38,19 @@ import AdminManagement from './pages/sysadmin/AdminManagement';
 
 // Components
 import { ProtectedRoute, GuestRoute } from './components/ProtectedRoute';
+
+// Role-specific route wrappers
+function StudentProtectedRoute() {
+  return <ProtectedRoute allowedRoles={["student"]}><Outlet /></ProtectedRoute>;
+}
+
+function UniversityAdminProtectedRoute() {
+  return <ProtectedRoute allowedRoles={["university_admin"]}><Outlet /></ProtectedRoute>;
+}
+
+function SystemAdminProtectedRoute() {
+  return <ProtectedRoute allowedRoles={["system_admin"]}><Outlet /></ProtectedRoute>;
+}
 
 export const router = createBrowserRouter([
   {
@@ -66,7 +80,7 @@ export const router = createBrowserRouter([
   // Student Routes
   {
     path: '/',
-    Component: ProtectedRoute,
+    Component: StudentProtectedRoute,
     children: [
       {
         Component: StudentLayout,
@@ -126,7 +140,7 @@ export const router = createBrowserRouter([
   // University Admin Routes
   {
     path: '/university-admin',
-    Component: ProtectedRoute,
+    Component: UniversityAdminProtectedRoute,
     children: [
       {
         Component: UniversityAdminLayout,
@@ -144,6 +158,10 @@ export const router = createBrowserRouter([
             Component: PostApproval,
           },
           {
+            path: 'events/approval',
+            Component: EventApproval,
+          },
+          {
             path: 'reports',
             Component: ReportedPosts,
           },
@@ -154,7 +172,7 @@ export const router = createBrowserRouter([
   // System Admin Routes
   {
     path: '/system-admin',
-    Component: ProtectedRoute,
+    Component: SystemAdminProtectedRoute,
     children: [
       {
         Component: SystemAdminLayout,

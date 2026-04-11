@@ -70,17 +70,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const { authService } = await import("../services/api");
-      const response = await authService.login(email, password, role);
-      set({ 
-        user: response.data, 
-        isAuthenticated: true, 
+      const user = await authService.login(email, password, role);
+      set({
+        user,
+        isAuthenticated: true,
         isLoading: false,
-        role: response.data.role 
+        role: user.role
       });
     } catch (error: any) {
-      set({ 
-        error: error.response?.data?.message || "Login failed", 
-        isLoading: false 
+      set({
+        error: error.response?.data?.message || "Login failed",
+        isLoading: false
       });
       throw error;
     }
@@ -90,17 +90,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const { authService } = await import("../services/api");
-      const response = await authService.register(userData as any);
-      set({ 
-        user: response.data, 
-        isAuthenticated: true, 
+      const user = await authService.register(userData as any);
+      set({
+        user,
+        isAuthenticated: true,
         isLoading: false,
         role: "student"
       });
     } catch (error: any) {
-      set({ 
-        error: error.response?.data?.message || "Registration failed", 
-        isLoading: false 
+      set({
+        error: error.response?.data?.message || "Registration failed",
+        isLoading: false
       });
       throw error;
     }
@@ -127,17 +127,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true });
     try {
       const { authService } = await import("../services/api");
-      const response = await authService.getMe();
-      set({ 
-        user: response.data, 
-        isAuthenticated: true, 
+      const user = await authService.getMe();
+      set({
+        user,
+        isAuthenticated: true,
         isLoading: false,
-        role: response.data.role
+        role: user.role
       });
     } catch (error) {
-      set({ 
-        user: null, 
-        isAuthenticated: false, 
+      set({
+        user: null,
+        isAuthenticated: false,
         isLoading: false,
         role: null
       });
