@@ -8,15 +8,16 @@ const universitySchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-    },
     domain: {
       type: String,
       required: true,
       unique: true,
+    },
+    description: {
+      type: String,
+      default: "",
+      maxlength: 5000,
+      trim: true,
     },
   },
   { timestamps: true }

@@ -3,6 +3,10 @@ const bcrypt = require("bcryptjs");
 
 const userSchema = new mongoose.Schema(
   {
+    fullName: {
+      type: String,
+      trim: true,
+    },
     name: {
       type: String,
       required: true,
@@ -63,6 +67,10 @@ const userSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    status: {
+      type: String,
+      default: "Active",
     },
   },
   { timestamps: true }

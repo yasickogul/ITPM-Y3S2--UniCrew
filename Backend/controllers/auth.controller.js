@@ -127,7 +127,8 @@ exports.login = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email });
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(401).json({
         message: "Invalid email or password",
@@ -153,12 +154,19 @@ exports.login = async (req, res) => {
       });
     }
 
-    const { token, refreshToken } = setCookies(res, user);
+    const { token } = setCookies(res, user);
 
     res.status(200).json({
       message: "Login successful",
       data: {
-        user,
+        token,
+        user: {
+          id: user._id.toString(),
+          name: user.fullName || user.name || "User",
+          email: user.email,
+          role: user.role,
+          university: user.university || null,
+        },
       },
     });
   } catch (error) {

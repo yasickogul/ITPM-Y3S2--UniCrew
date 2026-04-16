@@ -20,13 +20,16 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string, role?: UserRole) => void;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; role?: UserRole }>;
   register: (userData: Partial<User>) => void;
   logout: () => void;
   updateProfile: (userData: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050';
+const AUTH_STORAGE_KEY = 'unicrew.auth.user';
+const AUTH_TOKEN_KEY = 'unicrew.auth.token';
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -36,25 +39,53 @@ export const useAuth = () => {
   return context;
 };
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+function readStoredUser(): User | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as User;
+    if (!parsed?.id || !parsed?.email || !parsed?.role) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
 
-  const login = (email: string, password: string, role: UserRole = 'student') => {
-    // Mock login - in real app, this would call an API
-    const mockUser: User = {
-      id: '1',
-      name: 'John Doe',
-      email,
-      role,
-      studentId: 'STU2024001',
-      university: 'Harvard University',
-      degree: 'Computer Science',
-      year: '3',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
-      skills: ['React', 'TypeScript', 'Node.js', 'Python'],
-      about: 'Passionate about building innovative solutions and collaborating with fellow students.',
-    };
-    setUser(mockUser);
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<User | null>(readStoredUser);
+
+  const login = async (email: string, password: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        return { success: false, error: payload.message || 'Invalid email or password' };
+      }
+
+      const authenticatedUser: User = {
+        id: payload.data.user.id,
+        name: payload.data.user.name,
+        email: payload.data.user.email,
+        role: payload.data.user.role,
+        university: payload.data.user.university || undefined,
+      };
+
+      setUser(authenticatedUser);
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authenticatedUser));
+      localStorage.setItem(AUTH_TOKEN_KEY, payload.data.token);
+      return { success: true, role: authenticatedUser.role };
+    } catch (_error) {
+      return { success: false, error: 'Cannot reach server. Please try again.' };
+    }
   };
 
   const register = (userData: Partial<User>) => {
@@ -74,15 +105,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       about: '',
     };
     setUser(newUser);
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newUser));
   };
 
   const logout = () => {
     setUser(null);
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    localStorage.removeItem(AUTH_TOKEN_KEY);
   };
 
   const updateProfile = (userData: Partial<User>) => {
     if (user) {
-      setUser({ ...user, ...userData });
+      const updatedUser = { ...user, ...userData };
+      setUser(updatedUser);
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updatedUser));
     }
   };
 
