@@ -21,10 +21,6 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
 
   return <>{children}</>;
 }
-
-
-
-
 export default function App() {
   return (
     <AuthInitializer>

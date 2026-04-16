@@ -179,7 +179,7 @@ export default function CreatePost() {
                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full"></div>
               </div>
               <div>
-                <h5 className="font-bold text-[#1E293B] text-lg tracking-tight">IT245671234</h5>
+                <h5 className="font-bold text-[#1E293B] text-lg tracking-tight">{user?.studentId || user?.id || 'Unknown'}</h5>
                 <p className="text-[10px] text-indigo-600 font-black uppercase tracking-[0.2em] mt-0.5">Author Identity Verified</p>
               </div>
             </div>
