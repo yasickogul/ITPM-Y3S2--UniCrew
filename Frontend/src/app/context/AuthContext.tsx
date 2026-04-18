@@ -43,13 +43,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!nextUser) {
       localStorage.removeItem('userId');
       localStorage.removeItem('userName');
+      localStorage.removeItem('userStudentId');
       localStorage.removeItem('userUniversity');
       localStorage.removeItem('userRole');
       return;
     }
 
     localStorage.setItem('userId', nextUser.id || '');
-    localStorage.setItem('userName', nextUser.studentId || nextUser.name || 'Student');
+    localStorage.setItem('userName', nextUser.name || 'Student');
+    localStorage.setItem('userStudentId', nextUser.studentId || '');
     localStorage.setItem('userUniversity', nextUser.university || 'default-university');
     localStorage.setItem('userRole', nextUser.role || 'student');
   };
@@ -61,7 +63,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       name: 'John Doe',
       email,
       role,
-      studentId: 'STU2024001',
+      studentId: 'IT20240011',
       university: 'Harvard University',
       degree: 'Computer Science',
       year: '3',

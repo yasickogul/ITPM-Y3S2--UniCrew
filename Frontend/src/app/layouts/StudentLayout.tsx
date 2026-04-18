@@ -152,17 +152,18 @@ export default function StudentLayout() {
                 <DropdownMenuLabel>Notifications</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {notifications.map((item) => (
-                  <DropdownMenuItem
-                    key={item.id}
-                    className="flex flex-col items-start p-3 gap-1 cursor-pointer hover:bg-gray-50"
-                    onClick={() => navigate(item.path)}
-                  >
-                    <span className="font-semibold text-sm text-gray-800">{item.heading}</span>
-                    <span className="text-xs text-gray-600">{item.message}</span>
-                    <span className="text-xs text-gray-400">{item.time}</span>
-                  </DropdownMenuItem>
+                  <div key={item.id}>
+                    <DropdownMenuItem
+                      className="flex flex-col items-start p-3 gap-1 cursor-pointer hover:bg-gray-50"
+                      onClick={() => navigate(item.path)}
+                    >
+                      <span className="font-semibold text-sm text-gray-800">{item.heading}</span>
+                      <span className="text-xs text-gray-600">{item.message}</span>
+                      <span className="text-xs text-gray-400">{item.time}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </div>
                 ))}
-                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="justify-center text-blue-600 font-medium cursor-pointer"
                   onClick={() => setNotifications([])}
@@ -176,14 +177,16 @@ export default function StudentLayout() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center gap-2">
                   <Avatar className="w-8 h-8">
-                    <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=IT245671234`} />
-                    <AvatarFallback>IT</AvatarFallback>
+                    <AvatarImage src="https://ui-avatars.com/api/?name=IT2356789&background=2563eb&color=fff&bold=true" />
+                    <AvatarFallback>IT2</AvatarFallback>
                   </Avatar>
-                  <span className="hidden sm:inline">IT245671234</span>
+                  <span className="hidden sm:inline text-sm font-medium">IT2356789</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs text-gray-600 font-normal">IT2356789</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate('/profile')}>
                   <User className="mr-2 w-4 h-4" />
