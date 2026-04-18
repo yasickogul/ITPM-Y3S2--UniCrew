@@ -33,7 +33,7 @@ const errorHandler = (err, req, res, next) => {
   // JWT error
   if (err.name === 'JsonWebTokenError') {
     const message = 'Invalid token';
-    err.statusCode = 400;
+    err.statusCode = 401;
     err.message = message;
   }
 

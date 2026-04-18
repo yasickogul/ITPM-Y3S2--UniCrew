@@ -211,6 +211,14 @@ exports.getDiscussionById = async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Validate if id is a valid MongoDB ObjectId
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid discussion ID format',
+      });
+    }
+
     const discussion = await Discussion.findById(id);
     if (!discussion) {
       return res.status(404).json({
@@ -439,6 +447,51 @@ exports.editComment = async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to edit comment',
+    });
+  }
+};
+
+// Delete comment
+exports.deleteComment = async (req, res) => {
+  try {
+    const { id, commentId } = req.params;
+    const { 'x-user-id': userId } = req.headers;
+
+    const discussion = await Discussion.findById(id);
+    if (!discussion) {
+      return res.status(404).json({
+        success: false,
+        error: 'Discussion not found',
+      });
+    }
+
+    const comment = discussion.comments.id(commentId);
+    if (!comment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Comment not found',
+      });
+    }
+
+    if (comment.authorId !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only the author can delete this comment',
+      });
+    }
+
+    discussion.comments.pull({ _id: commentId });
+    await discussion.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Comment deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting comment:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete comment',
     });
   }
 };
