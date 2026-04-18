@@ -41,4 +41,7 @@ router.put('/:id/comments/:commentId/like', discussionController.likeComment);
 // Edit comment
 router.put('/:id/comments/:commentId', discussionController.editComment);
 
+// Delete comment
+router.delete('/:id/comments/:commentId', discussionController.deleteComment);
+
 module.exports = router;
