@@ -1,10 +1,9 @@
-import { createBrowserRouter } from 'react-router';
+import { createBrowserRouter, Navigate, Outlet } from 'react-router';
 
 // Layouts
 import StudentLayout from './layouts/StudentLayout';
 import UniversityAdminLayout from './layouts/UniversityAdminLayout';
 import SystemAdminLayout from './layouts/SystemAdminLayout';
-import { StudentGuard, SystemAdminGuard, UniversityAdminGuard } from './components/auth/RoleGuard';
 
 // Auth Pages
 import Landing from './pages/Landing';
@@ -30,11 +29,28 @@ import UniversityDashboard from './pages/admin/UniversityDashboard';
 import CommunityManagement from './pages/admin/CommunityManagement';
 import PostApproval from './pages/admin/PostApproval';
 import ReportedPosts from './pages/admin/ReportedPosts';
+import EventApproval from './pages/admin/EventApproval';
 
 // System Admin Pages
 import SystemDashboard from './pages/sysadmin/SystemDashboard';
 import UniversityManagement from './pages/sysadmin/UniversityManagement';
 import AdminManagement from './pages/sysadmin/AdminManagement';
+
+// Components
+import { ProtectedRoute, GuestRoute } from './components/ProtectedRoute';
+
+// Role-specific route wrappers
+function StudentProtectedRoute() {
+  return <ProtectedRoute allowedRoles={["student"]}><Outlet /></ProtectedRoute>;
+}
+
+function UniversityAdminProtectedRoute() {
+  return <ProtectedRoute allowedRoles={["university_admin"]}><Outlet /></ProtectedRoute>;
+}
+
+function SystemAdminProtectedRoute() {
+  return <ProtectedRoute allowedRoles={["system_admin"]}><Outlet /></ProtectedRoute>;
+}
 
 export const router = createBrowserRouter([
   {
@@ -43,18 +59,30 @@ export const router = createBrowserRouter([
   },
   {
     path: '/login',
-    Component: Login,
+    Component: GuestRoute,
+    children: [
+      {
+        index: true,
+        Component: Login,
+      },
+    ],
   },
   {
     path: '/register',
-    Component: Register,
+    Component: GuestRoute,
+    children: [
+      {
+        index: true,
+        Component: Register,
+      },
+    ],
   },
   // Student Routes
   {
-    Component: StudentGuard,
+    path: '/',
+    Component: StudentProtectedRoute,
     children: [
       {
-        path: '/',
         Component: StudentLayout,
         children: [
           {
@@ -111,10 +139,10 @@ export const router = createBrowserRouter([
   },
   // University Admin Routes
   {
-    Component: UniversityAdminGuard,
+    path: '/university-admin',
+    Component: UniversityAdminProtectedRoute,
     children: [
       {
-        path: '/university-admin',
         Component: UniversityAdminLayout,
         children: [
           {
@@ -130,6 +158,10 @@ export const router = createBrowserRouter([
             Component: PostApproval,
           },
           {
+            path: 'events/approval',
+            Component: EventApproval,
+          },
+          {
             path: 'reports',
             Component: ReportedPosts,
           },
@@ -139,10 +171,10 @@ export const router = createBrowserRouter([
   },
   // System Admin Routes
   {
-    Component: SystemAdminGuard,
+    path: '/system-admin',
+    Component: SystemAdminProtectedRoute,
     children: [
       {
-        path: '/system-admin',
         Component: SystemAdminLayout,
         children: [
           {
@@ -160,5 +192,10 @@ export const router = createBrowserRouter([
         ],
       },
     ],
+  },
+  // Catch all - redirect to home
+  {
+    path: '*',
+    element: <Navigate to="/" replace />,
   },
 ]);
