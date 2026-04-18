@@ -25,6 +25,8 @@ logs/
 *.db
 *.sqlite
 *.sqlite3
+.mongodb-data/
+*.wt
 
 # Test coverage
 coverage/
