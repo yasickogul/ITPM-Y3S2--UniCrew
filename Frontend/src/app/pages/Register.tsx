@@ -104,7 +104,7 @@ export default function Register() {
                   <Label htmlFor="studentId">Student ID *</Label>
                   <Input
                     id="studentId"
-                    placeholder="STU2024001"
+                    placeholder="IT20240011"
                     value={formData.studentId}
                     onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
                   />

@@ -3,7 +3,7 @@
  * Handles all API calls to the discussion backend endpoints
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050/api';
 
 // Helper function to get auth headers from localStorage
 const getAuthHeaders = () => {
@@ -179,6 +179,24 @@ export const discussionAPI = {
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to edit comment');
+      }
+
+      return await response.json();
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  deleteComment: async (discussionId, commentId) => {
+    try {
+      const response = await fetch(`${API_BASE}/discussions/${discussionId}/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete comment');
       }
 
       return await response.json();

@@ -6,10 +6,11 @@ import { Textarea } from '../../components/ui/textarea';
 import { Input } from '../../components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
 import { Badge } from '../../components/ui/badge';
-import { ArrowLeft, Flag, MessageSquare, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Flag, MessageSquare, Edit, Trash2, Heart } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'sonner';
 import { discussionAPI } from '../../../services/discussionAPI';
+import { mockPosts } from '../../data/mockData';
 
 type PostComment = {
   id: string;
@@ -31,6 +32,8 @@ type DiscussionPost = {
   timestamp: string;
   images?: string[];
   comments?: PostComment[];
+  likes?: number;
+  likedBy?: string[];
 };
 
 const postCategoryOptions = ['Kuppi', 'Programming', 'Projects', 'Events', 'Career', 'General', 'Research'];
@@ -74,6 +77,7 @@ const escapeHtml = (value: string) =>
     .replace(/'/g, '&#039;');
 
 const textToSafeHtml = (value: string) => escapeHtml(value).replace(/\n/g, '<br />');
+const isMongoObjectId = (value?: string) => Boolean(value && /^[0-9a-fA-F]{24}$/.test(value));
 
 export default function PostDetails() {
   const { id } = useParams();
@@ -94,6 +98,46 @@ export default function PostDetails() {
   const [editPostTitle, setEditPostTitle] = useState('');
   const [editPostCategory, setEditPostCategory] = useState('General');
   const [editPostContent, setEditPostContent] = useState('');
+  const [postLikes, setPostLikes] = useState(0);
+  const [isLiked, setIsLiked] = useState(false);
+
+  const getStoredPosts = () => JSON.parse(localStorage.getItem('newPosts') || '[]');
+
+  const saveStoredPosts = (posts: any[]) => {
+    localStorage.setItem('newPosts', JSON.stringify(posts));
+  };
+
+  const findLocalOrMockPost = (postId: string) => {
+    const stored = getStoredPosts();
+    const storedPost = stored.find((entry: any) => entry.id === postId);
+    if (storedPost) return storedPost;
+
+    return mockPosts.find((entry) => entry.id === postId);
+  };
+
+  const mapLocalPost = (entry: any): DiscussionPost => ({
+    id: entry.id || '',
+    title: entry.title || '',
+    content: entry.content || '',
+    author: entry.author || 'Anonymous',
+    authorId: entry.authorId || '',
+    communityName: entry.communityName || 'Unknown Community',
+    category: entry.category || 'General',
+    status: entry.status || 'Open',
+    timestamp: entry.timestamp || 'Just now',
+    images: Array.isArray(entry.images) ? entry.images : [],
+    comments: Array.isArray(entry.comments)
+      ? entry.comments.map((comment: any) => ({
+          id: comment.id || comment._id || Date.now().toString(),
+          author: comment.author,
+          authorId: comment.authorId,
+          content: comment.content,
+          timestamp: comment.timestamp || 'Just now',
+        }))
+      : [],
+    likes: Number(entry.likes || 0),
+    likedBy: Array.isArray(entry.likedBy) ? entry.likedBy : [],
+  });
 
   const fetchDiscussion = async () => {
     if (!id) {
@@ -105,6 +149,25 @@ export default function PostDetails() {
 
     setIsLoading(true);
     try {
+      if (!isMongoObjectId(id)) {
+        const localFallback = findLocalOrMockPost(id);
+        if (!localFallback) {
+          setPost(null);
+          setComments([]);
+          return;
+        }
+
+        const mappedLocal = mapLocalPost(localFallback);
+        setPost(mappedLocal);
+        setComments(mappedLocal.comments || []);
+
+        const likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '{}');
+        const likedEntry = likedPosts[id] || { count: mappedLocal.likes || 0, isLiked: false };
+        setPostLikes(Number(likedEntry.count || 0));
+        setIsLiked(Boolean(likedEntry.isLiked));
+        return;
+      }
+
       const response = await discussionAPI.getDiscussionById(id);
       const data = response?.data;
 
@@ -125,6 +188,8 @@ export default function PostDetails() {
         status: data.status || 'Open',
         timestamp: toRelativeTime(data.createdAt || data.timestamp),
         images: Array.isArray(data.images) ? data.images : [],
+        likes: Number(data.likes || 0),
+        likedBy: Array.isArray(data.likedBy) ? data.likedBy : [],
         comments: Array.isArray(data.comments)
           ? data.comments.map((comment: any) => ({
               id: comment._id || comment.id,
@@ -138,10 +203,24 @@ export default function PostDetails() {
 
       setPost(mappedPost);
       setComments(mappedPost.comments || []);
+      const signedInUserId = localStorage.getItem('userId') || user?.id || '';
+      setPostLikes(mappedPost.likes || 0);
+      setIsLiked(Boolean(mappedPost.likedBy?.includes(signedInUserId)));
     } catch (error: any) {
-      setPost(null);
-      setComments([]);
-      toast.error(error?.message || 'Failed to load post details.');
+      const localFallback = id ? findLocalOrMockPost(id) : null;
+      if (localFallback) {
+        const mappedLocal = mapLocalPost(localFallback);
+        setPost(mappedLocal);
+        setComments(mappedLocal.comments || []);
+        const likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '{}');
+        const likedEntry = likedPosts[id || ''] || { count: mappedLocal.likes || 0, isLiked: false };
+        setPostLikes(Number(likedEntry.count || 0));
+        setIsLiked(Boolean(likedEntry.isLiked));
+      } else {
+        setPost(null);
+        setComments([]);
+        toast.error(error?.message || 'Failed to load post details.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -153,7 +232,8 @@ export default function PostDetails() {
   }, [id]);
 
   const currentUserId = localStorage.getItem('userId') || user?.id || '';
-  const isAuthor = post ? currentUserId === post.authorId : false;
+  const currentUserName = localStorage.getItem('userName') || user?.name || user?.studentId || 'IT';
+  const isAuthor = post ? (currentUserId === post.authorId || currentUserName === post.author) : false;
 
   const handleStartPostEdit = () => {
     if (!post || !isAuthor) return;
@@ -195,23 +275,50 @@ export default function PostDetails() {
     setIsSavingPost(true);
     try {
       const safeHtmlContent = textToSafeHtml(trimmedContent);
-      const response = await discussionAPI.updateDiscussion(post.id, {
-        title: trimmedTitle,
-        content: safeHtmlContent,
-        category: editPostCategory,
-      });
 
-      const updated = response?.data;
-      setPost((prev) =>
-        prev
-          ? {
-              ...prev,
-              title: updated?.title || trimmedTitle,
-              content: updated?.content || safeHtmlContent,
-              category: updated?.category || editPostCategory,
-            }
-          : prev
-      );
+      if (isMongoObjectId(post.id)) {
+        const response = await discussionAPI.updateDiscussion(post.id, {
+          title: trimmedTitle,
+          content: safeHtmlContent,
+          category: editPostCategory,
+        });
+
+        const updated = response?.data;
+        setPost((prev) =>
+          prev
+            ? {
+                ...prev,
+                title: updated?.title || trimmedTitle,
+                content: updated?.content || safeHtmlContent,
+                category: updated?.category || editPostCategory,
+              }
+            : prev
+        );
+      } else {
+        setPost((prev) =>
+          prev
+            ? {
+                ...prev,
+                title: trimmedTitle,
+                content: safeHtmlContent,
+                category: editPostCategory,
+              }
+            : prev
+        );
+
+        const stored = getStoredPosts();
+        const nextStored = stored.map((entry: any) =>
+          entry.id === post.id
+            ? {
+                ...entry,
+                title: trimmedTitle,
+                content: safeHtmlContent,
+                category: editPostCategory,
+              }
+            : entry
+        );
+        saveStoredPosts(nextStored);
+      }
 
       setIsEditingPost(false);
       toast.success('Post updated successfully.');
@@ -230,7 +337,13 @@ export default function PostDetails() {
 
     setIsDeletingPost(true);
     try {
-      await discussionAPI.deleteDiscussion(post.id);
+      if (isMongoObjectId(post.id)) {
+        await discussionAPI.deleteDiscussion(post.id);
+      } else {
+        const stored = getStoredPosts();
+        const nextStored = stored.filter((entry: any) => entry.id !== post.id);
+        saveStoredPosts(nextStored);
+      }
       toast.success('Post deleted successfully.');
       navigate('/discussions');
     } catch (error: any) {
@@ -245,18 +358,40 @@ export default function PostDetails() {
 
     setIsSubmittingComment(true);
     try {
-      const response = await discussionAPI.addComment(post.id, newComment.trim());
-      const added = response?.data;
-
-      const normalizedComment: PostComment = {
-        id: added?._id || added?.id || Date.now().toString(),
-        author: added?.author || user?.studentId || user?.name || 'You',
-        authorId: added?.authorId || currentUserId,
-        content: added?.content || newComment.trim(),
-        timestamp: 'Just now',
-      };
+      let normalizedComment: PostComment;
+      if (isMongoObjectId(post.id)) {
+        const response = await discussionAPI.addComment(post.id, newComment.trim());
+        const added = response?.data;
+        normalizedComment = {
+          id: added?._id || added?.id || Date.now().toString(),
+          author: added?.author || currentUserName,
+          authorId: added?.authorId || currentUserId,
+          content: added?.content || newComment.trim(),
+          timestamp: toRelativeTime(added?.timestamp),
+        };
+      } else {
+        normalizedComment = {
+          id: Date.now().toString(),
+          author: currentUserName,
+          authorId: currentUserId,
+          content: newComment.trim(),
+          timestamp: 'Just now',
+        };
+      }
 
       setComments((prev) => [...prev, normalizedComment]);
+      if (!isMongoObjectId(post.id)) {
+        const stored = getStoredPosts();
+        const nextStored = stored.map((entry: any) =>
+          entry.id === post.id
+            ? {
+                ...entry,
+                comments: [...(entry.comments || []), normalizedComment],
+              }
+            : entry
+        );
+        saveStoredPosts(nextStored);
+      }
       setNewComment('');
       toast.success('Comment added!');
     } catch (error: any) {
@@ -278,10 +413,29 @@ export default function PostDetails() {
     }
 
     try {
-      await discussionAPI.editComment(post.id, commentId, editContent.trim());
+      if (isMongoObjectId(post.id)) {
+        await discussionAPI.editComment(post.id, commentId, editContent.trim());
+      }
+
       setComments((prev) =>
         prev.map((comment) => (comment.id === commentId ? { ...comment, content: editContent.trim() } : comment))
       );
+      if (!isMongoObjectId(post.id)) {
+        const stored = getStoredPosts();
+        const nextStored = stored.map((entry: any) =>
+          entry.id === post.id
+            ? {
+                ...entry,
+                comments: (entry.comments || []).map((comment: any) =>
+                  (comment.id || comment._id) === commentId
+                    ? { ...comment, content: editContent.trim() }
+                    : comment
+                ),
+              }
+            : entry
+        );
+        saveStoredPosts(nextStored);
+      }
       setEditingCommentId(null);
       setEditContent('');
       toast.success('Comment updated!');
@@ -290,8 +444,58 @@ export default function PostDetails() {
     }
   };
 
-  const handleDeleteComment = () => {
-    toast.error('Comment delete is not available yet.');
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      if (!post) return;
+      if (isMongoObjectId(post.id)) {
+        await discussionAPI.deleteComment(post.id, commentId);
+      }
+      setComments((prev) => prev.filter((comment) => comment.id !== commentId));
+      if (!isMongoObjectId(post.id)) {
+        const stored = getStoredPosts();
+        const nextStored = stored.map((entry: any) =>
+          entry.id === post.id
+            ? {
+                ...entry,
+                comments: (entry.comments || []).filter((comment: any) => (comment.id || comment._id) !== commentId),
+              }
+            : entry
+        );
+        saveStoredPosts(nextStored);
+      }
+      toast.success('Comment deleted!');
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to delete comment.');
+    }
+  };
+
+  const handleLikePost = async () => {
+    if (!post) return;
+
+    try {
+      if (isMongoObjectId(post.id)) {
+        const response = await discussionAPI.likeDiscussion(post.id);
+        const likes = Number(response?.data?.likes || 0);
+        const liked = Boolean(response?.data?.liked);
+        setPostLikes(likes);
+        setIsLiked(liked);
+      } else {
+        const nextLiked = !isLiked;
+        const nextLikes = nextLiked ? postLikes + 1 : Math.max(0, postLikes - 1);
+        setPostLikes(nextLikes);
+        setIsLiked(nextLiked);
+
+        const likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '{}');
+        likedPosts[post.id] = { count: nextLikes, isLiked: nextLiked };
+        localStorage.setItem('likedPosts', JSON.stringify(likedPosts));
+      }
+
+      if (!isLiked) {
+        toast.success('Post liked!');
+      }
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to update like.');
+    }
   };
 
   if (isLoading) {
@@ -370,6 +574,15 @@ export default function PostDetails() {
               )}
               <Button variant="ghost" size="sm" onClick={() => toast.success('Post has been flagged for moderation review.')}>
                 <Flag className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLikePost}
+                className={isLiked ? 'text-rose-600 border-rose-200 bg-rose-50' : ''}
+              >
+                <Heart className="w-4 h-4 mr-1" fill={isLiked ? 'currentColor' : 'none'} />
+                {postLikes}
               </Button>
             </div>
           </div>
@@ -461,7 +674,7 @@ export default function PostDetails() {
             return (
               <div key={comment.id} className="flex gap-3 relative group">
                 <Avatar>
-                  <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.author || 'A'}`} />
+                  <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.authorId || comment.author || 'A'}`} />
                   <AvatarFallback>{(comment.author || 'A').charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
@@ -485,7 +698,7 @@ export default function PostDetails() {
                               <Button size="sm" variant="ghost" onClick={() => handleStartEdit(comment)} className="h-6 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-100">
                                 <Edit className="w-3 h-3 mr-1" /> Edit
                               </Button>
-                              <Button size="sm" variant="ghost" onClick={handleDeleteComment} className="h-6 text-xs text-red-600 hover:text-red-700 hover:bg-red-100">
+                              <Button size="sm" variant="ghost" onClick={() => handleDeleteComment(comment.id)} className="h-6 text-xs text-red-600 hover:text-red-700 hover:bg-red-100">
                                 <Trash2 className="w-3 h-3 mr-1" /> Delete
                               </Button>
                             </>
@@ -509,8 +722,8 @@ export default function PostDetails() {
           <div className="border-t pt-4">
             <div className="flex gap-3">
               <Avatar>
-                <AvatarImage src={user?.avatar} />
-                <AvatarFallback>{user?.name?.charAt(0) || 'U'}</AvatarFallback>
+                <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUserId}`} />
+                <AvatarFallback>{currentUserId?.charAt(0) || 'U'}</AvatarFallback>
               </Avatar>
               <div className="flex-1 space-y-3">
                 <Textarea

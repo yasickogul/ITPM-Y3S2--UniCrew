@@ -132,10 +132,31 @@ export default function CreatePost() {
       };
 
       const response = await discussionAPI.createDiscussion(payload);
-      toast.success(response.message || 'Post published successfully!');
-      navigate('/discussions');
+      const createdId = response?.data?._id || response?.data?.id;
+
+      toast.success(response?.message || 'Post published successfully!');
+      if (createdId) {
+        navigate(`/discussions/${createdId}`);
+      } else {
+        navigate('/discussions');
+      }
     } catch (error: any) {
-      toast.error(error?.message || 'Failed to publish post. Please try again.');
+      const localPost = {
+        id: Date.now().toString(),
+        ...payload,
+        author: localStorage.getItem('userName') || 'IT',
+        authorId: localStorage.getItem('userId') || 'test-user',
+        status: 'Open',
+        timestamp: 'Just now',
+        comments: [],
+        likes: 0,
+        likedBy: [],
+      };
+      const existingPosts = JSON.parse(localStorage.getItem('newPosts') || '[]');
+      localStorage.setItem('newPosts', JSON.stringify([localPost, ...existingPosts]));
+
+      toast.success('Backend unavailable. Post saved locally.');
+      navigate(`/discussions/${localPost.id}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -156,7 +177,7 @@ export default function CreatePost() {
         <div className="pt-10 max-w-3xl mx-auto">
           <div className="mb-12 text-center">
             <h1 className="text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 via-blue-600 to-indigo-500 tracking-tight pb-2">
-              Create new post
+              Create New Post
             </h1>
             <p className="text-[#64748B] text-lg mt-4 font-medium max-w-md mx-auto leading-relaxed">
               Share knowledge or ask questions within your academic community.
@@ -174,12 +195,12 @@ export default function CreatePost() {
               <div className="relative">
                 <Avatar className="w-14 h-14 rounded-2xl shadow-md border-2 border-white">
                   <AvatarImage src={user?.avatar} />
-                  <AvatarFallback className="bg-indigo-100 text-indigo-700 font-bold">{user?.name?.charAt(0) || 'U'}</AvatarFallback>
+                  <AvatarFallback className="bg-indigo-100 text-indigo-700 font-bold">IT</AvatarFallback>
                 </Avatar>
                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full"></div>
               </div>
               <div>
-                <h5 className="font-bold text-[#1E293B] text-lg tracking-tight">IT245671234</h5>
+                <h5 className="font-bold text-[#1E293B] text-lg tracking-tight">IT</h5>
                 <p className="text-[10px] text-indigo-600 font-black uppercase tracking-[0.2em] mt-0.5">Author Identity Verified</p>
               </div>
             </div>
@@ -202,7 +223,7 @@ export default function CreatePost() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-[#1E293B] mb-2 ml-1">Category Select</label>
+                  <label className="block text-sm font-bold text-[#1E293B] mb-2 ml-1">Category</label>
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
