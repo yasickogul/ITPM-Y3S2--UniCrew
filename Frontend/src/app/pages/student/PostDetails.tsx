@@ -580,6 +580,7 @@ export default function PostDetails() {
                 size="sm"
                 onClick={handleLikePost}
                 className={isLiked ? 'text-rose-600 border-rose-200 bg-rose-50' : ''}
+                data-testid="post-like-button"
               >
                 <Heart className="w-4 h-4 mr-1" fill={isLiked ? 'currentColor' : 'none'} />
                 {postLikes}
@@ -672,7 +673,7 @@ export default function PostDetails() {
             const isCommentAuthor = commentAuthorId === currentUserId;
 
             return (
-              <div key={comment.id} className="flex gap-3 relative group">
+              <div key={comment.id} className="flex gap-3 relative group" data-testid={`comment-item-${comment.id}`}>
                 <Avatar>
                   <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.authorId || comment.author || 'A'}`} />
                   <AvatarFallback>{(comment.author || 'A').charAt(0)}</AvatarFallback>
@@ -689,16 +690,34 @@ export default function PostDetails() {
                               <Button size="sm" variant="ghost" onClick={() => setEditingCommentId(null)} className="h-6 text-xs text-gray-500">
                                 Cancel
                               </Button>
-                              <Button size="sm" variant="ghost" onClick={() => handleSaveEdit(comment.id)} className="h-6 text-xs text-green-600">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleSaveEdit(comment.id)}
+                                className="h-6 text-xs text-green-600"
+                                data-testid={`comment-save-button-${comment.id}`}
+                              >
                                 Save
                               </Button>
                             </>
                           ) : (
                             <>
-                              <Button size="sm" variant="ghost" onClick={() => handleStartEdit(comment)} className="h-6 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-100">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleStartEdit(comment)}
+                                className="h-6 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+                                data-testid={`comment-edit-button-${comment.id}`}
+                              >
                                 <Edit className="w-3 h-3 mr-1" /> Edit
                               </Button>
-                              <Button size="sm" variant="ghost" onClick={() => handleDeleteComment(comment.id)} className="h-6 text-xs text-red-600 hover:text-red-700 hover:bg-red-100">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDeleteComment(comment.id)}
+                                className="h-6 text-xs text-red-600 hover:text-red-700 hover:bg-red-100"
+                                data-testid={`comment-delete-button-${comment.id}`}
+                              >
                                 <Trash2 className="w-3 h-3 mr-1" /> Delete
                               </Button>
                             </>
@@ -708,7 +727,13 @@ export default function PostDetails() {
                     </div>
 
                     {editingCommentId === comment.id ? (
-                      <Textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} className="mt-2 min-h-[60px]" autoFocus />
+                      <Textarea
+                        value={editContent}
+                        onChange={(e) => setEditContent(e.target.value)}
+                        className="mt-2 min-h-[60px]"
+                        autoFocus
+                        data-testid={`edit-comment-input-${comment.id}`}
+                      />
                     ) : (
                       <p className="text-gray-700">{comment.content}</p>
                     )}
@@ -737,11 +762,13 @@ export default function PostDetails() {
                       handleAddComment();
                     }
                   }}
+                  data-testid="new-comment-input"
                 />
                 <Button
                   onClick={handleAddComment}
                   className="bg-gradient-to-r from-blue-600 to-indigo-600 w-full sm:w-auto"
                   disabled={!newComment.trim() || isSubmittingComment}
+                  data-testid="post-comment-button"
                 >
                   {isSubmittingComment ? 'Posting...' : 'Post Comment'}
                 </Button>

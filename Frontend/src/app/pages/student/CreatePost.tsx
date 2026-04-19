@@ -100,14 +100,23 @@ export default function CreatePost() {
       return;
     }
 
+    const selectedCommunity = mockCommunities.find((community) => community.id === formData.community);
+    if (!selectedCommunity) {
+      toast.error('Please select a valid community.');
+      return;
+    }
+
+    const payload = {
+      title: formData.title.trim(),
+      content: contentHtml.trim(),
+      communityId: formData.community,
+      communityName: selectedCommunity.name,
+      category: formData.category,
+      images,
+    };
+
     setIsSubmitting(true);
     try {
-      const selectedCommunity = mockCommunities.find((community) => community.id === formData.community);
-
-      if (!selectedCommunity) {
-        toast.error('Please select a valid community.');
-        return;
-      }
 
       if (user?.id) {
         localStorage.setItem('userId', user.id);
@@ -121,15 +130,6 @@ export default function CreatePost() {
       if (user?.role) {
         localStorage.setItem('userRole', user.role);
       }
-
-      const payload = {
-        title: formData.title.trim(),
-        content: contentHtml.trim(),
-        communityId: formData.community,
-        communityName: selectedCommunity.name,
-        category: formData.category,
-        images,
-      };
 
       const response = await discussionAPI.createDiscussion(payload);
       const createdId = response?.data?._id || response?.data?.id;
@@ -189,6 +189,7 @@ export default function CreatePost() {
             animate={{ opacity: 1, scale: 1 }}
             className="backdrop-blur-xl bg-white/70 rounded-[2.5rem] p-8 md:p-12 shadow-[0_30px_100px_-20px_rgba(0,0,0,0.06)] border border-white/40 relative overflow-hidden ring-1 ring-black/5"
             onSubmit={handleSubmit}
+            data-testid="create-post-form"
           >
             {/* Author Info */}
             <div className="flex items-center gap-4 mb-10 relative z-10">
@@ -215,6 +216,7 @@ export default function CreatePost() {
                     className="w-full h-14 bg-[#F8FAFC] border-none text-[#475569] font-medium text-[15px] rounded-2xl px-5 appearance-none hover:bg-[#EEF2F6] transition-colors focus:ring-2 focus:ring-indigo-100 outline-none cursor-pointer shadow-inner"
                     disabled={isSubmitting}
                     required
+                    data-testid="community-select"
                   >
                     <option value="" disabled>Select a community...</option>
                     {mockCommunities.map(c => (
@@ -230,6 +232,7 @@ export default function CreatePost() {
                     className="w-full h-14 bg-[#F8FAFC] border-none text-[#475569] font-medium text-[15px] rounded-2xl px-5 appearance-none hover:bg-[#EEF2F6] transition-colors focus:ring-2 focus:ring-indigo-100 outline-none cursor-pointer shadow-inner"
                     disabled={isSubmitting}
                     required
+                    data-testid="category-select"
                   >
                     <option value="" disabled>Select a category...</option>
                     <option value="Kuppi">Kuppi</option>
@@ -258,6 +261,7 @@ export default function CreatePost() {
                     required
                     maxLength={30}
                     disabled={isSubmitting}
+                    data-testid="post-title-input"
                   />
                 </div>
               </div>
@@ -334,6 +338,7 @@ export default function CreatePost() {
                     onBlur={(e) => setContentHtml(e.currentTarget.innerHTML)}
                     className={`w-full min-h-[350px] px-6 py-6 text-[#475569] font-medium outline-none text-[15px] leading-relaxed relative empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 empty:before:pointer-events-none`}
                     data-placeholder="Share your thoughts or ask a question..."
+                    data-testid="post-content-editor"
                   />
                 </div>
               </div>
@@ -349,6 +354,7 @@ export default function CreatePost() {
                 type="submit"
                 disabled={isSubmitting || !isFormValid}
                 className="px-8 py-3.5 bg-[#5B4FDB] text-white font-bold text-sm rounded-2xl shadow-[0_10px_25px_-5px_rgba(91,79,219,0.4)] hover:shadow-[0_15px_35px_-5px_rgba(91,79,219,0.5)] transition-all flex items-center gap-2 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                data-testid="submit-post-button"
               >
                 {isSubmitting ? (
                   <>Creating Post...</>

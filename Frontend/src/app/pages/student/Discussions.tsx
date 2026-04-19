@@ -399,6 +399,7 @@ export default function Discussions() {
           onChange={(event) => setSearchQuery(event.target.value)}
           placeholder="Search posts, authors, categories..."
           className="w-full sm:w-72 bg-white rounded-xl h-11"
+          data-testid="discussions-search-input"
         />
         <Select value={selectedCommunity} onValueChange={setSelectedCommunity}>
           <SelectTrigger className="w-full sm:w-64 bg-white border-none shadow-sm rounded-xl h-11">
@@ -451,6 +452,7 @@ export default function Discussions() {
               <Card
                 key={post.id}
                 className="group border-none shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] transition-all duration-300 rounded-[1.5rem] overflow-hidden bg-white"
+                data-testid={`post-card-${post.id}`}
               >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
@@ -498,6 +500,7 @@ export default function Discussions() {
                             ? 'text-rose-500 bg-rose-50 hover:bg-rose-100 hover:text-rose-600'
                             : 'text-gray-500 hover:bg-indigo-50 hover:text-indigo-600'
                         }`}
+                        data-testid={`post-like-toggle-${post.id}`}
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
