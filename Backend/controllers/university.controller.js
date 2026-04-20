@@ -19,6 +19,13 @@ exports.createUniversity = async (req, res) => {
       });
     }
 
+    const existingDomain = await University.findOne({ domain: normalizedDomain }).lean();
+    if (existingDomain) {
+      return res.status(409).json({
+        message: "University with given domain already exists",
+      });
+    }
+
     const desc =
       description !== undefined && description !== null
         ? String(description).trim().slice(0, 5000)
@@ -120,11 +127,31 @@ exports.updateUniversity = async (req, res) => {
       });
     }
 
+    const currentUniversity = await University.findById(id).lean();
+    if (!currentUniversity) {
+      return res.status(404).json({
+        message: "University not found",
+      });
+    }
+
     const updateData = {};
     if (name !== undefined && name !== null && String(name).trim() !== "") {
       updateData.name = String(name).trim();
     }
-    if (normalizedDomain !== undefined && normalizedDomain !== "") {
+    if (
+      normalizedDomain !== undefined &&
+      normalizedDomain !== "" &&
+      normalizedDomain !== currentUniversity.domain
+    ) {
+      const existingDomain = await University.findOne({
+        domain: normalizedDomain,
+        _id: { $ne: id },
+      }).lean();
+      if (existingDomain) {
+        return res.status(409).json({
+          message: "University with given domain already exists",
+        });
+      }
       updateData.domain = normalizedDomain;
     }
     if (hasDescription) {
@@ -139,20 +166,10 @@ exports.updateUniversity = async (req, res) => {
       });
     }
 
-    const university = await University.findByIdAndUpdate(
-      id,
-      updateData,
-      {
-        new: true,
-        runValidators: true,
-      }
-    );
-
-    if (!university) {
-      return res.status(404).json({
-        message: "University not found",
-      });
-    }
+    const university = await University.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    });
 
     res.status(200).json({
       message: "University updated successfully",

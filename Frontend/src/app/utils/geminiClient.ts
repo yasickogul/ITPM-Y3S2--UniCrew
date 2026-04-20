@@ -1,4 +1,28 @@
-const GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+/** Models tried in order (AI Studio / API key compatible). */
+const GEMINI_MODELS = [ 'models/gemini-1.5-flash'];
+
+function buildPrompt(params: {
+  currentDescription: string;
+  userPrompt: string;
+  universityName?: string;
+}) {
+  const instructions = `You help write concise, professional university profile descriptions for a campus platform.
+Return ONLY the improved description text (plain text, no markdown code fences, no wrapping the entire answer in quotes).
+Keep it under 800 words unless the user asks otherwise.`;
+
+  const context = `University name: ${params.universityName || '(not specified)'}
+
+Current description draft:
+"""
+${params.currentDescription || '(empty)'}
+"""
+
+User instruction:
+${params.userPrompt}`;
+
+  // Single user turn only — avoids v1/v1beta schema issues with top-level systemInstruction (e.g. "fullPrompt" validation errors).
+  return `${instructions}\n\n---\n\n${context}`;
+}
 
 export async function enhanceUniversityDescription(params: {
   currentDescription: string;
@@ -10,29 +34,26 @@ export async function enhanceUniversityDescription(params: {
     throw new Error('GEMINI_API_KEY is not configured. Add it to Frontend/.env and restart Vite.');
   }
 
-  const systemInstruction = `You help write concise, professional university profile descriptions for a campus platform.
-Return ONLY the improved description text (plain text, no markdown fences, no quotes wrapping the whole answer).
-Keep it under 800 words unless the user asks otherwise.`;
-
-  const userText = `University name: ${params.universityName || '(not specified)'}
-
-Current description draft:
-"""
-${params.currentDescription || '(empty)'}
-"""
-
-User instruction:
-${params.userPrompt}`;
+  const textPayload = buildPrompt(params);
 
   const body = JSON.stringify({
-    systemInstruction: { parts: [{ text: systemInstruction }] },
-    contents: [{ role: 'user', parts: [{ text: userText }] }],
+    contents: [
+      {
+        role: 'user',
+        parts: [{ text: textPayload }],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 4096,
+    },
   });
 
   let lastError = 'Gemini request failed';
 
   for (const model of GEMINI_MODELS) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -42,16 +63,28 @@ ${params.userPrompt}`;
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      lastError = data?.error?.message || response.statusText || lastError;
+      lastError = data?.error?.message || data?.error?.status || response.statusText || lastError;
+      continue;
+    }
+
+    const blockReason = data?.promptFeedback?.blockReason;
+    if (blockReason) {
+      lastError = `Request blocked (${blockReason}). Try a different prompt.`;
+      continue;
+    }
+
+    const candidate = data?.candidates?.[0];
+    const finishReason = candidate?.finishReason;
+    if (finishReason && finishReason !== 'STOP' && finishReason !== 'MAX_TOKENS') {
+      lastError = `Generation stopped (${finishReason}). Try shortening the description or prompt.`;
       continue;
     }
 
     const text =
-      data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text).join('')?.trim() ||
-      '';
+      candidate?.content?.parts?.map((p: { text?: string }) => p.text).filter(Boolean).join('')?.trim() || '';
 
     if (!text) {
-      lastError = 'No text returned from Gemini';
+      lastError = 'No text returned from Gemini. Check the API key and model access.';
       continue;
     }
 
