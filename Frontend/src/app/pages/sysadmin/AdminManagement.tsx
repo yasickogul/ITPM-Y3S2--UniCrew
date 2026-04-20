@@ -79,8 +79,8 @@ export default function AdminManagement() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
   const [apiError, setApiError] = useState('');
-  const [generatedPassword, setGeneratedPassword] = useState('');
 
   const getAuthToken = () => localStorage.getItem('unicrew.auth.token');
 
@@ -177,7 +177,6 @@ export default function AdminManagement() {
 
     setIsSubmitting(true);
     setApiError('');
-    setGeneratedPassword('');
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/system-admin/university-admins`, {
@@ -199,8 +198,7 @@ export default function AdminManagement() {
         throw new Error(payload.message || 'Failed to create university admin');
       }
 
-      setGeneratedPassword(payload?.credentials?.temporaryPassword || '');
-      toast.success('University admin created');
+      toast.success(payload.message || 'University admin created. Credentials sent by email.');
       setIsCreateOpen(false);
       resetCreateForm();
       fetchPageData();
@@ -249,7 +247,22 @@ export default function AdminManagement() {
 
       toast.success('University admin updated');
       setIsEditOpen(false);
-      fetchPageData();
+      setAdmins((prev) =>
+        prev.map((a) =>
+          a.id === editFormData.id
+            ? {
+                ...a,
+                name: payload?.data?.fullName || editFormData.name.trim(),
+                email: payload?.data?.email || editFormData.email.trim().toLowerCase(),
+                university: payload?.data?.university?.name || a.university,
+                universityId: payload?.data?.university?._id || editFormData.university,
+                status: payload?.data?.status || editFormData.status,
+              }
+            : a
+        )
+      );
+      setHighlightId(editFormData.id);
+      setTimeout(() => setHighlightId(null), 1200);
     } catch (error) {
       setApiError(error instanceof Error ? error.message : 'Something went wrong');
       toast.error(error instanceof Error ? error.message : 'Update failed');
@@ -281,7 +294,9 @@ export default function AdminManagement() {
       }
 
       toast.success('University admin deleted');
-      fetchPageData();
+      setTimeout(() => {
+        setAdmins((prev) => prev.filter((a) => a.id !== admin.id));
+      }, 180);
     } catch (error) {
       setApiError(error instanceof Error ? error.message : 'Something went wrong');
       toast.error(error instanceof Error ? error.message : 'Delete failed');
@@ -473,14 +488,6 @@ export default function AdminManagement() {
         </CardHeader>
         <CardContent>
           {apiError ? <p className="mb-4 text-sm text-red-600">{apiError}</p> : null}
-          {generatedPassword ? (
-            <div className="mb-4 rounded border border-green-200 bg-green-50 p-3">
-              <p className="text-sm text-green-800">
-                University admin created. Temporary password:{' '}
-                <span className="font-semibold">{generatedPassword}</span>
-              </p>
-            </div>
-          ) : null}
           <Table>
             <TableHeader>
               <TableRow>
@@ -506,7 +513,12 @@ export default function AdminManagement() {
                 </TableRow>
               ) : (
                 admins.map((admin) => (
-                  <TableRow key={admin.id}>
+                  <TableRow
+                    key={admin.id}
+                    className={`transition-all duration-200 ${
+                      deletingId === admin.id ? 'opacity-40 scale-[0.99]' : 'opacity-100'
+                    } ${highlightId === admin.id ? 'bg-green-50' : ''}`}
+                  >
                     <TableCell>
                       <p className="font-medium">{admin.name}</p>
                     </TableCell>

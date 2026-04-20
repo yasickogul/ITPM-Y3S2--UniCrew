@@ -93,6 +93,7 @@ export default function UniversityManagement() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
   const [apiError, setApiError] = useState('');
 
   const [aiTarget, setAiTarget] = useState<AiTarget>(null);
@@ -238,7 +239,20 @@ export default function UniversityManagement() {
 
       toast.success('University updated');
       setIsEditOpen(false);
-      fetchUniversities();
+      setUniversities((prev) =>
+        prev.map((u) =>
+          u.id === editFormData.id
+            ? {
+                ...u,
+                name: payload?.data?.name || editFormData.name.trim(),
+                emailDomain: payload?.data?.domain || normalizeEmailDomain(editFormData.emailDomain),
+                description: payload?.data?.description || editFormData.description.trim(),
+              }
+            : u
+        )
+      );
+      setHighlightId(editFormData.id);
+      setTimeout(() => setHighlightId(null), 1200);
     } catch (error) {
       setApiError(error instanceof Error ? error.message : 'Something went wrong');
       toast.error(error instanceof Error ? error.message : 'Update failed');
@@ -270,7 +284,10 @@ export default function UniversityManagement() {
       }
 
       toast.success('University deleted');
-      fetchUniversities();
+      // short delay for fade-out transition
+      setTimeout(() => {
+        setUniversities((prev) => prev.filter((u) => u.id !== id));
+      }, 180);
     } catch (error) {
       setApiError(error instanceof Error ? error.message : 'Something went wrong');
       toast.error(error instanceof Error ? error.message : 'Delete failed');
@@ -525,7 +542,12 @@ export default function UniversityManagement() {
                 </TableRow>
               ) : (
                 universities.map((university) => (
-                  <TableRow key={university.id}>
+                  <TableRow
+                    key={university.id}
+                    className={`transition-all duration-200 ${
+                      deletingId === university.id ? 'opacity-40 scale-[0.99]' : 'opacity-100'
+                    } ${highlightId === university.id ? 'bg-green-50' : ''}`}
+                  >
                     <TableCell>
                       <p className="font-medium">{university.name}</p>
                     </TableCell>
