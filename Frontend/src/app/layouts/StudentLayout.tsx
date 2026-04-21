@@ -56,19 +56,41 @@ export default function StudentLayout() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" className="relative">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="relative">
+                  <Bell className="w-5 h-5" />
+                  <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="flex flex-col items-start p-3 gap-1 cursor-pointer hover:bg-gray-50" onClick={() => navigate('/discussions/1')}>
+                  <span className="font-semibold text-sm text-gray-800">New Reply</span>
+                  <span className="text-xs text-gray-600">IT245671235 replied to your post</span>
+                  <span className="text-xs text-gray-400">Just now</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="flex flex-col items-start p-3 gap-1 cursor-pointer hover:bg-gray-50" onClick={() => navigate('/discussions/2')}>
+                  <span className="font-semibold text-sm text-gray-800">Community Alert</span>
+                  <span className="text-xs text-gray-600">"Data Science Club" added a new discussion</span>
+                  <span className="text-xs text-gray-400">2 hours ago</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="justify-center text-blue-600 font-medium cursor-pointer">
+                  Mark all as read
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center gap-2">
                   <Avatar className="w-8 h-8">
-                    <AvatarImage src={user?.avatar} />
-                    <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
+                    <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=IT245671234`} />
+                    <AvatarFallback>IT</AvatarFallback>
                   </Avatar>
-                  <span className="hidden sm:inline">{user?.name}</span>
+                  <span className="hidden sm:inline">IT245671234</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -106,8 +128,8 @@ export default function StudentLayout() {
                   <motion.div
                     className={`
                       flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200
-                      ${isActive 
-                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md' 
+                      ${isActive
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
                         : 'hover:bg-gray-100'
                       }
                     `}
