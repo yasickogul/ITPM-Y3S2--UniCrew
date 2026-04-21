@@ -183,7 +183,7 @@ const ChatBox = (): React.ReactElement => {
       timestamp,
     };
 
-    setMessages((prev) => [...prev, outgoingMessage]);
+    //setMessages((prev) => [...prev, outgoingMessage]);
 
     socket.emit("sendMessage", {
       ...outgoingMessage,
