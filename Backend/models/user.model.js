@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
 
 const userSchema = new mongoose.Schema(
   {
@@ -9,7 +8,6 @@ const userSchema = new mongoose.Schema(
     },
     name: {
       type: String,
-      required: true,
       trim: true,
     },
     email: {
@@ -22,74 +20,21 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: true,
-      minlength: 6,
-    },
-    studentId: {
-      type: String,
-      sparse: true,
-      trim: true,
     },
     role: {
       type: String,
-      enum: ["student", "university_admin", "system_admin"],
-      default: "student",
-    },
-    universityId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "University",
+      required: true,
     },
     university: {
-      type: String,
-    },
-    degree: {
-      type: String,
-    },
-    year: {
-      type: String,
-    },
-    linkedin: {
-      type: String,
-    },
-    github: {
-      type: String,
-    },
-    avatar: {
-      type: String,
-    },
-    skills: [
-      {
-        type: String,
-      },
-    ],
-    about: {
-      type: String,
-    },
-    isActive: {
-      type: Boolean,
-      default: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "University",
     },
     status: {
       type: String,
       default: "Active",
     },
   },
-  { timestamps: true }
+  { timestamps: true, collection: "users" }
 );
-
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-  this.password = await bcrypt.hash(this.password, 12);
-  next();
-});
-
-userSchema.methods.comparePassword = async function (candidatePassword) {
-  return bcrypt.compare(candidatePassword, this.password);
-};
-
-userSchema.methods.toJSON = function () {
-  const user = this.toObject();
-  delete user.password;
-  return user;
-};
 
 module.exports = mongoose.model("User", userSchema);

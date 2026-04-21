@@ -7,11 +7,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar'
 import { Badge } from '../../components/ui/badge';
 import { Send, Flag, Search } from 'lucide-react';
 import { mockCommunities, mockMessages } from '../../data/mockData';
-import { useAuthStore } from '../../stores/authStore';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Chat() {
   const { communityId } = useParams();
-  const { user } = useAuthStore();
+  const { user } = useAuth();
   const [selectedCommunityId, setSelectedCommunityId] = useState(communityId || '1');
   const [message, setMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');

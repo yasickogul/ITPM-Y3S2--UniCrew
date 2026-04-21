@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -6,22 +6,11 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { mockCommunities } from '../../data/mockData';
 import { ArrowLeft } from 'lucide-react';
-import { eventService, communityService } from '../../services/api';
-import { useAuthStore } from '../../stores/authStore';
-import { toast } from 'sonner';
-
-interface Community {
-  _id: string;
-  name: string;
-}
 
 export default function CreateEvent() {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
-  const [communities, setCommunities] = useState<Community[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingCommunities, setIsLoadingCommunities] = useState(true);
   const [formData, setFormData] = useState({
     title: '',
     community: '',
@@ -32,63 +21,10 @@ export default function CreateEvent() {
     description: '',
   });
 
-  useEffect(() => {
-    fetchCommunities();
-  }, []);
-
-  const fetchCommunities = async () => {
-    try {
-      setIsLoadingCommunities(true);
-      const data = await communityService.getAll();
-      setCommunities(Array.isArray(data) ? data : []);
-    } catch (error) {
-      toast.error('Failed to load communities');
-      console.error('Error loading communities:', error);
-    } finally {
-      setIsLoadingCommunities(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!user) {
-      toast.error('You must be logged in to create an event');
-      navigate('/login');
-      return;
-    }
-
-    const selectedCommunity = communities.find(c => c._id === formData.community);
-    if (!selectedCommunity) {
-      toast.error('Please select a valid community');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const eventData = {
-        title: formData.title,
-        description: formData.description,
-        date: new Date(formData.date).toISOString(),
-        time: formData.time,
-        location: formData.location,
-        communityId: formData.community,
-        communityName: selectedCommunity.name,
-        organizer: user.name,
-        organizerId: user._id,
-        googleFormUrl: formData.googleFormUrl,
-      };
-
-      await eventService.create(eventData);
-      toast.success('Event created successfully!');
-      navigate('/events');
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Failed to create event';
-      toast.error(errorMessage);
-      console.error('Error creating event:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    // In a real app, this would create the event
+    navigate('/events');
   };
 
   return (
@@ -106,15 +42,10 @@ export default function CreateEvent() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Event Details</CardTitle>
+          <CardTitle>Event Detailssss</CardTitle>
           <CardDescription>Fill in the information for your event</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-800">
-              <strong>Note:</strong> Events require university admin approval before they become visible to other students.
-            </p>
-          </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="title">Event Title *</Label>
@@ -124,19 +55,18 @@ export default function CreateEvent() {
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 required
-                disabled={isLoading}
               />
             </div>
 
             <div className="space-y-2">
               <Label>Community *</Label>
-              <Select value={formData.community} onValueChange={(value) => setFormData({ ...formData, community: value })} disabled={isLoadingCommunities || isLoading}>
+              <Select value={formData.community} onValueChange={(value) => setFormData({ ...formData, community: value })}>
                 <SelectTrigger>
-                  <SelectValue placeholder={isLoadingCommunities ? "Loading communities..." : "Select community"} />
+                  <SelectValue placeholder="Select community" />
                 </SelectTrigger>
                 <SelectContent>
-                  {communities.map((community) => (
-                    <SelectItem key={community._id} value={community._id}>
+                  {mockCommunities.map((community) => (
+                    <SelectItem key={community.id} value={community.id}>
                       {community.name}
                     </SelectItem>
                   ))}
@@ -153,7 +83,6 @@ export default function CreateEvent() {
                   value={formData.date}
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                   required
-                  disabled={isLoading}
                 />
               </div>
 
@@ -165,22 +94,11 @@ export default function CreateEvent() {
                   value={formData.time}
                   onChange={(e) => setFormData({ ...formData, time: e.target.value })}
                   required
-                  disabled={isLoading}
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="location">Location *</Label>
-              <Input
-                id="location"
-                placeholder="e.g., Engineering Building, Room 101"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                required
-                disabled={isLoading}
-              />
-            </div>
+            
 
             <div className="space-y-2">
               <Label htmlFor="googleForm">Google Form Registration URL</Label>
@@ -190,7 +108,6 @@ export default function CreateEvent() {
                 placeholder="https://forms.google.com/..."
                 value={formData.googleFormUrl}
                 onChange={(e) => setFormData({ ...formData, googleFormUrl: e.target.value })}
-                disabled={isLoading}
               />
               <p className="text-sm text-gray-600">
                 Optional: Add a Google Form link for event registration
@@ -206,15 +123,14 @@ export default function CreateEvent() {
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 required
-                disabled={isLoading}
               />
             </div>
 
             <div className="flex gap-4">
-              <Button type="submit" className="bg-gradient-to-r from-blue-600 to-indigo-600" disabled={isLoading || isLoadingCommunities}>
-                {isLoading ? "Creating..." : "Create Event"}
+              <Button type="submit" className="bg-gradient-to-r from-blue-600 to-indigo-600">
+                Create Event
               </Button>
-              <Button type="button" variant="outline" onClick={() => navigate(-1)} disabled={isLoading}>
+              <Button type="button" variant="outline" onClick={() => navigate(-1)}>
                 Cancel
               </Button>
             </div>
