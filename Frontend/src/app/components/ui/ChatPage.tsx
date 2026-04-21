@@ -4,6 +4,7 @@ import { Box, Typography } from "@mui/material";
 import GroupList from "./GroupList";
 import ChatBox from "./ChatBox";
 
+
 const ChatPage = (): React.ReactElement => {
   return (
     <Box

@@ -19,4 +19,5 @@ const MessageInput = (): React.ReactElement => {
   );
 };
 
+
 export default MessageInput;
