@@ -2,19 +2,43 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
 
 const universityRoutes = require("./routes/university.routes");
+const eventRoutes = require("./routes/event.routes");
+const authRoutes = require("./routes/auth.routes");
+const adminRoutes = require("./routes/admin.routes");
+const communityRoutes = require("./routes/community.routes");
 const universityAdminRoutes = require("./routes/universityAdmin.routes");
 const discussionRoutes = require("./routes/discussion.routes");
 const aiRoutes = require("./routes/ai.routes");
-const authRoutes = require("./routes/auth.routes");
 const systemAdminRoutes = require("./routes/systemAdmin.routes");
 
 const app = express();
 const PORT = process.env.PORT || 5050;
 
-// middleware (for JSON body with 50MB limit for images)
-app.use(cors());
+app.use(cookieParser());
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
+        process.env.CLIENT_URL,
+      ].filter(Boolean);
+
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
@@ -23,15 +47,16 @@ mongoose
   .then(() => console.log("Database is connected."))
   .catch((err) => console.log(err));
 
-// Routes
 app.use("/api/universities", universityRoutes);
+app.use("/api/events", eventRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/communities", communityRoutes);
 app.use("/api/system-admin", systemAdminRoutes);
 app.use("/api/system-admin/university-admins", universityAdminRoutes);
 app.use("/api/discussions", discussionRoutes);
 app.use("/api/ai", aiRoutes);
-app.use("/api/auth", authRoutes);
 
-// Test Route
 app.get("/", (req, res) => {
   res.send("API Running...");
 });
