@@ -3,10 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../components/ui/button';
 import { Users, Calendar, MessageSquare, Plus } from 'lucide-react';
 import { mockCommunities, mockEvents, mockPosts } from '../../data/mockData';
-import { useAuthStore } from '../../stores/authStore';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Dashboard() {
-  const { user } = useAuthStore();
+  const { user } = useAuth();
 
   const joinedCommunities = mockCommunities.slice(0, 3);
   const upcomingEvents = mockEvents.slice(0, 3);

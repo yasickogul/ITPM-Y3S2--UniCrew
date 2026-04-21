@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router';
-import { useAuthStore } from '../stores/authStore';
+import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import {
@@ -53,7 +53,7 @@ const toRelativeTime = (dateString?: string) => {
 };
 
 export default function StudentLayout() {
-  const { user, logout } = useAuthStore();
+  const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -103,8 +103,8 @@ export default function StudentLayout() {
     };
   }, []);
 
-  const handleLogout = async () => {
-    await logout();
+  const handleLogout = () => {
+    logout();
     navigate('/');
   };
 

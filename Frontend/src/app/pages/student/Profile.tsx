@@ -7,10 +7,10 @@ import { Textarea } from '../../components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
 import { Badge } from '../../components/ui/badge';
 import { Edit, Github, Linkedin, Mail, Save, X } from 'lucide-react';
-import { useAuthStore } from '../../stores/authStore';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Profile() {
-  const { user, updateUser } = useAuthStore();
+  const { user, updateProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -21,7 +21,7 @@ export default function Profile() {
   });
 
   const handleSave = () => {
-    updateUser({
+    updateProfile({
       ...formData,
       skills: formData.skills.split(',').map(s => s.trim()).filter(s => s),
     });
