@@ -113,6 +113,8 @@ export default function CommunityDetails() {
           </CardContent>
         </Card>
       </div>
+\
+
 
       {/* Recent Activity */}
       <Card>

@@ -7,11 +7,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar'
 import { Badge } from '../../components/ui/badge';
 import { Send, Flag, Search } from 'lucide-react';
 import { mockCommunities, mockMessages } from '../../data/mockData';
-import { useAuth } from '../../context/AuthContext';
+import { useAuthStore } from '../../stores/authStore';
 
 export default function Chat() {
   const { communityId } = useParams();
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const [selectedCommunityId, setSelectedCommunityId] = useState(communityId || '1');
   const [message, setMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -33,7 +33,7 @@ export default function Chat() {
       {/* Chat List Sidebar */}
       <Card className="w-80 flex flex-col">
         <CardHeader>
-          <CardTitle>Community Chats</CardTitle>
+          <CardTitle>Community Chats loch</CardTitle>
           <div className="relative mt-2">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -7,11 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
 import { Badge } from '../../components/ui/badge';
-import { Plus, RotateCw } from 'lucide-react';
-import { mockUniversityAdmins, mockUniversities } from '../../data/mockData';
+import { Plus, Edit, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const NAME_REGEX = /^[A-Za-z0-9 ]+$/;
+const NAME_REGEX = /^[A-Za-z0-9 .,'-]+$/;
 
 function validateAdminForm(data: { name: string; email: string; university: string }) {
   const errors: Record<string, string> = {};
@@ -23,7 +25,7 @@ function validateAdminForm(data: { name: string; email: string; university: stri
   } else if (name.length > 120) {
     errors.name = 'Name is too long';
   } else if (!NAME_REGEX.test(name)) {
-    errors.name = 'Name cannot contain special characters';
+    errors.name = 'Name contains invalid characters';
   }
 
   const email = data.email.trim().toLowerCase();
@@ -40,14 +42,99 @@ function validateAdminForm(data: { name: string; email: string; university: stri
   return errors;
 }
 
+type UniversityOption = {
+  id: string;
+  name: string;
+};
+
+type UniversityAdmin = {
+  id: string;
+  name: string;
+  email: string;
+  university: string;
+  universityId: string;
+  status: string;
+};
+
 export default function AdminManagement() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     university: '',
   });
+  const [editFormData, setEditFormData] = useState({
+    id: '',
+    name: '',
+    email: '',
+    university: '',
+    status: 'Active',
+  });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [editFieldErrors, setEditFieldErrors] = useState<Record<string, string>>({});
+  const [universities, setUniversities] = useState<UniversityOption[]>([]);
+  const [admins, setAdmins] = useState<UniversityAdmin[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const [apiError, setApiError] = useState('');
+
+  const getAuthToken = () => localStorage.getItem('unicrew.auth.token');
+
+  const fetchPageData = async () => {
+    setApiError('');
+    setIsLoading(true);
+
+    try {
+      const [universitiesRes, adminsRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/universities`),
+        fetch(`${API_BASE_URL}/api/system-admin/university-admins`, {
+          headers: {
+            Authorization: `Bearer ${getAuthToken() || ''}`,
+          },
+        }),
+      ]);
+
+      const universitiesPayload = await universitiesRes.json();
+      const adminsPayload = await adminsRes.json();
+
+      if (!universitiesRes.ok) {
+        throw new Error(universitiesPayload.message || 'Failed to load universities');
+      }
+
+      if (!adminsRes.ok) {
+        throw new Error(adminsPayload.message || 'Failed to load university admins');
+      }
+
+      const universityItems = (universitiesPayload.data || []).map((u: any) => ({
+        id: u._id,
+        name: u.name,
+      }));
+
+      const adminItems = (adminsPayload.data || []).map((admin: any) => ({
+        id: admin._id,
+        name: admin.fullName,
+        email: admin.email,
+        university: admin.university?.name || 'Unknown University',
+        universityId: admin.university?._id || '',
+        status: admin.status || 'Active',
+      }));
+
+      setUniversities(universityItems);
+      setAdmins(adminItems);
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : 'Something went wrong');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPageData();
+  }, []);
 
   const resetCreateForm = () => {
     setFormData({ name: '', email: '', university: '' });
@@ -61,15 +148,161 @@ export default function AdminManagement() {
     }
   };
 
-  const handleCreate = () => {
+  const openEdit = (admin: UniversityAdmin) => {
+    setEditFormData({
+      id: admin.id,
+      name: admin.name,
+      email: admin.email,
+      university: admin.universityId,
+      status: admin.status,
+    });
+    setEditFieldErrors({});
+    setIsEditOpen(true);
+  };
+
+  const handleEditDialogChange = (open: boolean) => {
+    setIsEditOpen(open);
+    if (!open) {
+      setEditFormData({ id: '', name: '', email: '', university: '', status: 'Active' });
+      setEditFieldErrors({});
+    }
+  };
+
+  const handleCreate = async () => {
     const errors = validateAdminForm(formData);
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       return;
     }
-    // In real app, would create admin
-    setIsCreateOpen(false);
-    resetCreateForm();
+
+    setIsSubmitting(true);
+    setApiError('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/system-admin/university-admins`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getAuthToken() || ''}`,
+        },
+        body: JSON.stringify({
+          fullName: formData.name.trim(),
+          email: formData.email.trim().toLowerCase(),
+          assignedUniversity: formData.university,
+        }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.message || 'Failed to create university admin');
+      }
+
+      toast.success(payload.message || 'University admin created. Credentials sent by email.');
+      setIsCreateOpen(false);
+      resetCreateForm();
+      fetchPageData();
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : 'Something went wrong');
+      toast.error(error instanceof Error ? error.message : 'Create failed');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdate = async () => {
+    const errors = validateAdminForm({
+      name: editFormData.name,
+      email: editFormData.email,
+      university: editFormData.university,
+    });
+    if (Object.keys(errors).length > 0) {
+      setEditFieldErrors(errors);
+      return;
+    }
+
+    setIsEditSubmitting(true);
+    setApiError('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/system-admin/university-admins/${editFormData.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getAuthToken() || ''}`,
+        },
+        body: JSON.stringify({
+          fullName: editFormData.name.trim(),
+          email: editFormData.email.trim().toLowerCase(),
+          assignedUniversity: editFormData.university,
+          status: editFormData.status,
+        }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.message || 'Failed to update university admin');
+      }
+
+      toast.success('University admin updated');
+      setIsEditOpen(false);
+      setAdmins((prev) =>
+        prev.map((a) =>
+          a.id === editFormData.id
+            ? {
+                ...a,
+                name: payload?.data?.fullName || editFormData.name.trim(),
+                email: payload?.data?.email || editFormData.email.trim().toLowerCase(),
+                university: payload?.data?.university?.name || a.university,
+                universityId: payload?.data?.university?._id || editFormData.university,
+                status: payload?.data?.status || editFormData.status,
+              }
+            : a
+        )
+      );
+      setHighlightId(editFormData.id);
+      setTimeout(() => setHighlightId(null), 1200);
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : 'Something went wrong');
+      toast.error(error instanceof Error ? error.message : 'Update failed');
+    } finally {
+      setIsEditSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (admin: UniversityAdmin) => {
+    if (!window.confirm(`Delete university admin "${admin.name}" (${admin.email})? This removes their login account.`)) {
+      return;
+    }
+
+    setDeletingId(admin.id);
+    setApiError('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/system-admin/university-admins/${admin.id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${getAuthToken() || ''}`,
+        },
+      });
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(payload.message || 'Failed to delete university admin');
+      }
+
+      toast.success('University admin deleted');
+      setTimeout(() => {
+        setAdmins((prev) => prev.filter((a) => a.id !== admin.id));
+      }, 180);
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : 'Something went wrong');
+      toast.error(error instanceof Error ? error.message : 'Delete failed');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -89,9 +322,7 @@ export default function AdminManagement() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Create University Admin</DialogTitle>
-              <DialogDescription>
-                Add a new administrator for a university
-              </DialogDescription>
+              <DialogDescription>Add a new administrator for a university</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 mt-4">
               <div className="space-y-2">
@@ -107,9 +338,7 @@ export default function AdminManagement() {
                     if (fieldErrors.name) setFieldErrors((prev) => ({ ...prev, name: '' }));
                   }}
                 />
-                {fieldErrors.name ? (
-                  <p className="text-sm text-red-600">{fieldErrors.name}</p>
-                ) : null}
+                {fieldErrors.name ? <p className="text-sm text-red-600">{fieldErrors.name}</p> : null}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="admin-email">Email *</Label>
@@ -125,9 +354,7 @@ export default function AdminManagement() {
                     if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: '' }));
                   }}
                 />
-                {fieldErrors.email ? (
-                  <p className="text-sm text-red-600">{fieldErrors.email}</p>
-                ) : null}
+                {fieldErrors.email ? <p className="text-sm text-red-600">{fieldErrors.email}</p> : null}
               </div>
               <div className="space-y-2">
                 <Label>Assigned University *</Label>
@@ -142,16 +369,14 @@ export default function AdminManagement() {
                     <SelectValue placeholder="Select university" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockUniversities.map((university) => (
+                    {universities.map((university) => (
                       <SelectItem key={university.id} value={university.id}>
                         {university.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {fieldErrors.university ? (
-                  <p className="text-sm text-red-600">{fieldErrors.university}</p>
-                ) : null}
+                {fieldErrors.university ? <p className="text-sm text-red-600">{fieldErrors.university}</p> : null}
               </div>
               <div className="bg-blue-50 border border-blue-200 rounded p-3">
                 <p className="text-sm text-gray-700">
@@ -159,7 +384,9 @@ export default function AdminManagement() {
                 </p>
               </div>
               <div className="flex gap-2 mt-6">
-                <Button onClick={handleCreate} className="flex-1">Create Admin</Button>
+                <Button onClick={handleCreate} className="flex-1" disabled={isSubmitting}>
+                  {isSubmitting ? 'Creating...' : 'Create Admin'}
+                </Button>
                 <Button variant="outline" type="button" onClick={() => handleDialogOpenChange(false)}>
                   Cancel
                 </Button>
@@ -169,12 +396,98 @@ export default function AdminManagement() {
         </Dialog>
       </div>
 
+      <Dialog open={isEditOpen} onOpenChange={handleEditDialogChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit University Admin</DialogTitle>
+            <DialogDescription>Update name, email, assigned university, or status</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-admin-name">Full Name *</Label>
+              <Input
+                id="edit-admin-name"
+                value={editFormData.name}
+                aria-invalid={!!editFieldErrors.name}
+                className={editFieldErrors.name ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                onChange={(e) => {
+                  setEditFormData({ ...editFormData, name: e.target.value });
+                  if (editFieldErrors.name) setEditFieldErrors((prev) => ({ ...prev, name: '' }));
+                }}
+              />
+              {editFieldErrors.name ? <p className="text-sm text-red-600">{editFieldErrors.name}</p> : null}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-admin-email">Email *</Label>
+              <Input
+                id="edit-admin-email"
+                type="email"
+                value={editFormData.email}
+                aria-invalid={!!editFieldErrors.email}
+                className={editFieldErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                onChange={(e) => {
+                  setEditFormData({ ...editFormData, email: e.target.value });
+                  if (editFieldErrors.email) setEditFieldErrors((prev) => ({ ...prev, email: '' }));
+                }}
+              />
+              {editFieldErrors.email ? <p className="text-sm text-red-600">{editFieldErrors.email}</p> : null}
+            </div>
+            <div className="space-y-2">
+              <Label>Assigned University *</Label>
+              <Select
+                value={editFormData.university}
+                onValueChange={(value) => {
+                  setEditFormData({ ...editFormData, university: value });
+                  if (editFieldErrors.university) setEditFieldErrors((prev) => ({ ...prev, university: '' }));
+                }}
+              >
+                <SelectTrigger className={editFieldErrors.university ? 'border-red-500' : ''}>
+                  <SelectValue placeholder="Select university" />
+                </SelectTrigger>
+                <SelectContent>
+                  {universities.map((university) => (
+                    <SelectItem key={university.id} value={university.id}>
+                      {university.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {editFieldErrors.university ? <p className="text-sm text-red-600">{editFieldErrors.university}</p> : null}
+            </div>
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select
+                value={editFormData.status}
+                onValueChange={(value) => setEditFormData({ ...editFormData, status: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2 mt-6">
+              <Button onClick={handleUpdate} className="flex-1" disabled={isEditSubmitting}>
+                {isEditSubmitting ? 'Saving...' : 'Save changes'}
+              </Button>
+              <Button variant="outline" type="button" onClick={() => handleEditDialogChange(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardHeader>
           <CardTitle>All University Admins</CardTitle>
           <CardDescription>Manage administrator accounts</CardDescription>
         </CardHeader>
         <CardContent>
+          {apiError ? <p className="mb-4 text-sm text-red-600">{apiError}</p> : null}
           <Table>
             <TableHeader>
               <TableRow>
@@ -186,24 +499,54 @@ export default function AdminManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockUniversityAdmins.map((admin) => (
-                <TableRow key={admin.id}>
-                  <TableCell>
-                    <p className="font-medium">{admin.name}</p>
-                  </TableCell>
-                  <TableCell>{admin.email}</TableCell>
-                  <TableCell>{admin.university}</TableCell>
-                  <TableCell>
-                    <Badge variant="default">{admin.status}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="outline" size="sm">
-                      <RotateCw className="w-4 h-4 mr-2" />
-                      Reset Password
-                    </Button>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-gray-500">
+                    Loading admins...
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : admins.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-gray-500">
+                    No university admins yet
+                  </TableCell>
+                </TableRow>
+              ) : (
+                admins.map((admin) => (
+                  <TableRow
+                    key={admin.id}
+                    className={`transition-all duration-200 ${
+                      deletingId === admin.id ? 'opacity-40 scale-[0.99]' : 'opacity-100'
+                    } ${highlightId === admin.id ? 'bg-green-50' : ''}`}
+                  >
+                    <TableCell>
+                      <p className="font-medium">{admin.name}</p>
+                    </TableCell>
+                    <TableCell>{admin.email}</TableCell>
+                    <TableCell>{admin.university}</TableCell>
+                    <TableCell>
+                      <Badge variant="default">{admin.status}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="sm" type="button" onClick={() => openEdit(admin)} title="Edit">
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          type="button"
+                          disabled={deletingId === admin.id}
+                          onClick={() => handleDelete(admin)}
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-600" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>

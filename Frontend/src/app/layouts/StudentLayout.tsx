@@ -11,14 +11,97 @@ import {
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
 import { Bell, Home, Users, MessageSquare, Calendar, User, LogOut, Menu, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { discussionAPI } from '../../services/discussionAPI';
+
+type NotificationItem = {
+  id: string;
+  heading: string;
+  message: string;
+  time: string;
+  path: string;
+};
+
+const fallbackNotifications: NotificationItem[] = [
+  {
+    id: 'fallback-1',
+    heading: 'Discussions',
+    message: 'View latest updates in your discussion board',
+    time: 'Now',
+    path: '/discussions',
+  },
+];
+
+const toRelativeTime = (dateString?: string) => {
+  if (!dateString) return 'Now';
+
+  const createdAt = new Date(dateString);
+  if (Number.isNaN(createdAt.getTime())) return 'Now';
+
+  const diffMs = Date.now() - createdAt.getTime();
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+
+  if (diffMinutes < 1) return 'Just now';
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d ago`;
+};
 
 export default function StudentLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>(fallbackNotifications);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadNotifications = async () => {
+      try {
+        const response = await discussionAPI.getDiscussions({ sortBy: 'newest', limit: 3 });
+        const discussions = Array.isArray(response?.data) ? response.data : [];
+
+        if (discussions.length === 0) {
+          if (isMounted) setNotifications(fallbackNotifications);
+          return;
+        }
+
+        const mappedNotifications: NotificationItem[] = discussions.map((post: any) => {
+          const id = post._id || post.id;
+          const author = post.author || 'Someone';
+          const title = post.title || 'a discussion';
+
+          return {
+            id: `discussion-${id || Math.random().toString(36).slice(2)}`,
+            heading: 'New Discussion',
+            message: `${author} posted "${title}"`,
+            time: toRelativeTime(post.createdAt || post.timestamp),
+            path: id ? `/discussions/${id}` : '/discussions',
+          };
+        });
+
+        if (isMounted) {
+          setNotifications(mappedNotifications);
+        }
+      } catch {
+        if (isMounted) {
+          setNotifications(fallbackNotifications);
+        }
+      }
+    };
+
+    loadNotifications();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -56,19 +139,47 @@ export default function StudentLayout() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" className="relative">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="relative">
+                  <Bell className="w-5 h-5" />
+                  {notifications.length > 0 && (
+                    <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {notifications.map((item) => (
+                  <DropdownMenuItem
+                    key={item.id}
+                    className="flex flex-col items-start p-3 gap-1 cursor-pointer hover:bg-gray-50"
+                    onClick={() => navigate(item.path)}
+                  >
+                    <span className="font-semibold text-sm text-gray-800">{item.heading}</span>
+                    <span className="text-xs text-gray-600">{item.message}</span>
+                    <span className="text-xs text-gray-400">{item.time}</span>
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="justify-center text-blue-600 font-medium cursor-pointer"
+                  onClick={() => setNotifications([])}
+                >
+                  Mark all as read
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center gap-2">
                   <Avatar className="w-8 h-8">
-                    <AvatarImage src={user?.avatar} />
-                    <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
+                    <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=IT245671234`} />
+                    <AvatarFallback>IT</AvatarFallback>
                   </Avatar>
-                  <span className="hidden sm:inline">{user?.name}</span>
+                  <span className="hidden sm:inline">IT245671234</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -106,8 +217,8 @@ export default function StudentLayout() {
                   <motion.div
                     className={`
                       flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200
-                      ${isActive 
-                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md' 
+                      ${isActive
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
                         : 'hover:bg-gray-100'
                       }
                     `}
