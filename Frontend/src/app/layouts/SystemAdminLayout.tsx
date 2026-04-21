@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router';
-import { useAuthStore } from '../stores/authStore';
+import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import {
@@ -14,13 +14,13 @@ import { LayoutDashboard, Building2, UserCog, LogOut, Menu, X, ShieldCheck } fro
 import { useState } from 'react';
 
 export default function SystemAdminLayout() {
-  const { user, logout } = useAuthStore();
+  const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const handleLogout = async () => {
-    await logout();
+  const handleLogout = () => {
+    logout();
     navigate('/');
   };
 
