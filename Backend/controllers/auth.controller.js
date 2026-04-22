@@ -5,7 +5,7 @@ const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
 const JWT_SECRET = process.env.JWT_SECRET || "unicrew_secret_key";
 
 const generateTokens = (user) => {
-  const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
+  const token = jwt.sign({ id: user._id, role: user.role, universityId: user.universityId }, JWT_SECRET, { expiresIn: "7d" });
   const refreshToken = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "30d" });
   return { token, refreshToken };
 };

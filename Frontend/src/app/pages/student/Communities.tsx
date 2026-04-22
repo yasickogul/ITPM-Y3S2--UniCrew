@@ -6,6 +6,7 @@ import { Input } from '../../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Users, Search } from 'lucide-react';
 import { communityService } from '../../services/api';
+import { useAuthStore } from '../../stores/authStore';
 import { toast } from 'sonner';
 
 interface Community {
@@ -20,6 +21,7 @@ interface Community {
 }
 
 export default function Communities() {
+  const { user } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterFaculty, setFilterFaculty] = useState('all');
   const [filterYear, setFilterYear] = useState('all');
@@ -28,14 +30,16 @@ export default function Communities() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchCommunities();
-  }, []);
+    if (user?.universityId) {
+      fetchCommunities();
+    }
+  }, [user?.universityId]);
 
   const fetchCommunities = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await communityService.getAll();
+      const response = await communityService.getAll({ universityId: user?.universityId });
       setCommunities(Array.isArray(response) ? response : []);
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || 'Failed to load communities';
