@@ -2,13 +2,6 @@ const jwt = require("jsonwebtoken");
 
 const JWT_SECRET = process.env.JWT_SECRET || "unicrew_secret_key";
 
-<<<<<<< Updated upstream
-const normalizeRole = (roleValue = "") => {
-  const role = String(roleValue).trim().toLowerCase().replace(/\s+/g, "_");
-  if (role === "systemadmin") return "system_admin";
-  if (role === "universityadmin" || role === "uni_admin") return "university_admin";
-  return role;
-=======
 exports.authenticate = (req, res, next) => {
   try {
     let token = req.cookies?.token;
@@ -42,7 +35,6 @@ exports.authenticate = (req, res, next) => {
       message: "Invalid token",
     });
   }
->>>>>>> Stashed changes
 };
 
 const getToken = (req) => {
