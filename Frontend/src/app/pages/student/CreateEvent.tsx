@@ -33,13 +33,15 @@ export default function CreateEvent() {
   });
 
   useEffect(() => {
-    fetchCommunities();
-  }, []);
+    if (user?.universityId) {
+      fetchCommunities();
+    }
+  }, [user?.universityId]);
 
   const fetchCommunities = async () => {
     try {
       setIsLoadingCommunities(true);
-      const data = await communityService.getAll();
+      const data = await communityService.getAll({ universityId: user?.universityId });
       setCommunities(Array.isArray(data) ? data : []);
     } catch (error) {
       toast.error('Failed to load communities');

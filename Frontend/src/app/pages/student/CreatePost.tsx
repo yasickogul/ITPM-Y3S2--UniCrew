@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'sonner';
@@ -12,7 +12,6 @@ import { discussionAPI } from '../../../services/discussionAPI';
 export default function CreatePost() {
   const navigate = useNavigate();
   const { user } = useAuth();
-
   const [formData, setFormData] = useState({
     title: '',
     community: '',
