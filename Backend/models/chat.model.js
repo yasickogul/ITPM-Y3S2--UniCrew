@@ -20,3 +20,4 @@ router.put('/messages/:id', updateMessage);
 router.delete('/messages/:id', deleteMessage);
 
 module.exports = router;
+
