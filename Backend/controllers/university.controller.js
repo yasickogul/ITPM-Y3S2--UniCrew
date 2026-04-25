@@ -3,46 +3,19 @@
 const University = require("../models/university.model");
 
 const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
-const normalizeDomain = (value) =>
-  String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/^@/, "")
-    .replace(/^https?:\/\//, "")
-    .replace(/\/.*$/, "")
-    .replace(/\.$/, "");
-
-const duplicateUniversityMessage = (error) => {
-  const field = error?.keyPattern ? Object.keys(error.keyPattern)[0] : "domain";
-  const value = error?.keyValue?.[field];
-
-  if (field === "domain") {
-    return `University with domain "${value || "provided value"}" already exists`;
-  }
-
-  if (field === "name") {
-    return `University with name "${value || "provided value"}" already exists`;
-  }
-
-  return "University with given details already exists";
-};
 
 // CREATE UNIVERSITY
 exports.createUniversity = async (req, res) => {
   try {
     const { name, domain, emailDomain, description } = req.body;
-    const normalizedDomain = normalizeDomain(domain || emailDomain);
+    const normalizedDomain = String(domain || emailDomain || "")
+      .trim()
+      .toLowerCase()
+      .replace(/^@/, "");
 
     if (!name || !normalizedDomain) {
       return res.status(400).json({
         message: "Name and email domain are required",
-      });
-    }
-
-    const existingDomain = await University.findOne({ domain: normalizedDomain }).lean();
-    if (existingDomain) {
-      return res.status(409).json({
-        message: "University with given domain already exists",
       });
     }
 
@@ -64,7 +37,7 @@ exports.createUniversity = async (req, res) => {
   } catch (error) {
     if (error.code === 11000) {
       return res.status(409).json({
-        message: duplicateUniversityMessage(error),
+        message: "University with given domain already exists",
       });
     }
 
@@ -127,7 +100,10 @@ exports.updateUniversity = async (req, res) => {
     const { name, domain, emailDomain, description } = req.body;
     const normalizedDomain =
       domain !== undefined || emailDomain !== undefined
-        ? normalizeDomain(domain || emailDomain)
+        ? String(domain || emailDomain || "")
+            .trim()
+            .toLowerCase()
+            .replace(/^@/, "")
         : undefined;
 
     if (!isValidId(id)) {
@@ -144,31 +120,11 @@ exports.updateUniversity = async (req, res) => {
       });
     }
 
-    const currentUniversity = await University.findById(id).lean();
-    if (!currentUniversity) {
-      return res.status(404).json({
-        message: "University not found",
-      });
-    }
-
     const updateData = {};
     if (name !== undefined && name !== null && String(name).trim() !== "") {
       updateData.name = String(name).trim();
     }
-    if (
-      normalizedDomain !== undefined &&
-      normalizedDomain !== "" &&
-      normalizedDomain !== currentUniversity.domain
-    ) {
-      const existingDomain = await University.findOne({
-        domain: normalizedDomain,
-        _id: { $ne: id },
-      }).lean();
-      if (existingDomain) {
-        return res.status(409).json({
-          message: "University with given domain already exists",
-        });
-      }
+    if (normalizedDomain !== undefined && normalizedDomain !== "") {
       updateData.domain = normalizedDomain;
     }
     if (hasDescription) {
@@ -183,10 +139,20 @@ exports.updateUniversity = async (req, res) => {
       });
     }
 
-    const university = await University.findByIdAndUpdate(id, updateData, {
-      new: true,
-      runValidators: true,
-    });
+    const university = await University.findByIdAndUpdate(
+      id,
+      updateData,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!university) {
+      return res.status(404).json({
+        message: "University not found",
+      });
+    }
 
     res.status(200).json({
       message: "University updated successfully",
@@ -195,7 +161,7 @@ exports.updateUniversity = async (req, res) => {
   } catch (error) {
     if (error.code === 11000) {
       return res.status(409).json({
-        message: duplicateUniversityMessage(error),
+        message: "University with given domain already exists",
       });
     }
 
