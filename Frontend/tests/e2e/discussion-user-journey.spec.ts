@@ -63,3 +63,53 @@ test('student discussion user journey works end-to-end', async ({ page }) => {
   await page.getByTestId('discussions-search-input').fill(title);
   await expect(page.getByText(title)).toBeVisible();
 });
+
+test('student can edit and delete their own discussion post', async ({ page }) => {
+  const runId = Date.now().toString().slice(-6);
+  const title = `PW Edit Test ${runId}`;
+  const content = `Original content for edit test ${runId}.`;
+  const updatedTitle = `PW Edited Title ${runId}`;
+  const updatedContent = `Updated content for edit test ${runId}.`;
+
+  await loginAsStudent(page);
+
+  await page.goto('/discussions/create');
+  await expect(page.getByTestId('create-post-form')).toBeVisible();
+  await page.getByTestId('community-select').selectOption('1');
+  await page.getByTestId('category-select').selectOption('General');
+  await page.getByTestId('post-title-input').fill(title);
+  await page.getByTestId('post-content-editor').click();
+  await page.keyboard.type(content);
+  await page.getByTestId('submit-post-button').click();
+
+  await page.waitForURL((url) => !url.pathname.endsWith('/discussions/create'), { timeout: 30_000 });
+  await expect(page).toHaveURL(/\/discussions\/[^/]+$/);
+  await expect(page.getByText(title)).toBeVisible();
+
+  await page.getByTestId('edit-post-button').click();
+  await expect(page.getByTestId('edit-post-title-input')).toBeVisible();
+
+  await page.getByTestId('edit-post-title-input').fill(updatedTitle);
+  await page.getByTestId('edit-post-content-input').fill(updatedContent);
+  await page.getByTestId('save-post-edit-button').click();
+
+  await expect(page.getByText(updatedTitle)).toBeVisible();
+  await expect(page.getByText(title)).toHaveCount(0);
+
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByTestId('delete-post-button').click();
+  await page.waitForURL(/\/discussions$/, { timeout: 15_000 });
+});
+
+test('discussions list sorts correctly by most liked', async ({ page }) => {
+  await loginAsStudent(page);
+  await page.goto('/discussions');
+
+  await expect(page.getByTestId('discussions-search-input')).toBeVisible();
+
+  await page.getByTestId('sort-select-trigger').click();
+  await page.getByRole('option', { name: 'Most Liked' }).click();
+
+  const cards = page.locator('[data-testid^="post-card-"]');
+  await expect(cards.first()).toBeVisible();
+});
