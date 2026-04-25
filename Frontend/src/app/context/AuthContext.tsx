@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { authService } from '../services/api';
+import { useAuthStore } from '../stores/authStore';
 
 export type UserRole = 'student' | 'university_admin' | 'system_admin' | null;
 
@@ -21,15 +23,13 @@ interface User {
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; role?: UserRole }>;
-  register: (userData: Partial<User>) => void;
+  register: (userData: Partial<User>) => Promise<void>;
   logout: () => void;
-  updateProfile: (userData: Partial<User>) => void;
+  updateProfile: (userData: Partial<User>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050';
 const AUTH_STORAGE_KEY = 'unicrew.auth.user';
-const AUTH_TOKEN_KEY = 'unicrew.auth.token';
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -54,73 +54,112 @@ function readStoredUser(): User | null {
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(readStoredUser);
+  const setStoreUser = useAuthStore((state) => state.setUser);
+  const setStoreLoading = useAuthStore((state) => state.setLoading);
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          password,
-        }),
-      });
-
-      const payload = await response.json();
-      if (!response.ok) {
-        return { success: false, error: payload.message || 'Invalid email or password' };
-      }
-
+      const authenticated = await authService.login(email, password);
       const authenticatedUser: User = {
-        id: payload.data.user.id,
-        name: payload.data.user.name,
-        email: payload.data.user.email,
-        role: payload.data.user.role,
-        university: payload.data.user.university || undefined,
-      };
+        id: authenticated._id || authenticated.id,
+        name: authenticated.name,
+        email: authenticated.email,
+        role: authenticated.role,
+        university: authenticated.university || undefined,
+        universityId: authenticated.universityId || undefined,
+        studentId: authenticated.studentId || undefined,
+        degree: authenticated.degree || undefined,
+        year: authenticated.year || undefined,
+        linkedin: authenticated.linkedin || undefined,
+        github: authenticated.github || undefined,
+        avatar: authenticated.avatar || undefined,
+        skills: authenticated.skills || [],
+        about: authenticated.about || '',
+      } as User;
 
       setUser(authenticatedUser);
+      setStoreUser({ ...(authenticated as any), _id: authenticatedUser.id } as any);
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authenticatedUser));
-      localStorage.setItem(AUTH_TOKEN_KEY, payload.data.token);
       return { success: true, role: authenticatedUser.role };
     } catch (_error) {
       return { success: false, error: 'Cannot reach server. Please try again.' };
     }
   };
 
-  const register = (userData: Partial<User>) => {
+  const register = async (userData: Partial<User>) => {
+    const registered = await authService.register(userData as any);
     const newUser: User = {
-      id: Date.now().toString(),
-      name: userData.name || '',
-      email: userData.email || '',
-      role: 'student',
-      studentId: userData.studentId,
-      university: userData.university,
-      degree: userData.degree,
-      year: userData.year,
-      linkedin: userData.linkedin,
-      github: userData.github,
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.name}`,
-      skills: [],
-      about: '',
-    };
+      id: registered._id || registered.id,
+      name: registered.name,
+      email: registered.email,
+      role: registered.role || 'student',
+      studentId: registered.studentId,
+      university: registered.university,
+      degree: registered.degree,
+      year: registered.year,
+      linkedin: registered.linkedin,
+      github: registered.github,
+      avatar: registered.avatar,
+      skills: registered.skills || [],
+      about: registered.about || '',
+    } as User;
     setUser(newUser);
+    setStoreUser({ ...(registered as any), _id: newUser.id } as any);
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newUser));
   };
 
   const logout = () => {
+    authService.logout().catch(() => undefined);
     setUser(null);
+    setStoreUser(null);
     localStorage.removeItem(AUTH_STORAGE_KEY);
-    localStorage.removeItem(AUTH_TOKEN_KEY);
   };
 
-  const updateProfile = (userData: Partial<User>) => {
+  const updateProfile = async (userData: Partial<User>) => {
     if (user) {
-      const updatedUser = { ...user, ...userData };
+      const updated = await authService.updateProfile(userData as any);
+      const updatedUser = { ...user, ...updated, id: updated._id || user.id };
       setUser(updatedUser);
+      setStoreUser(updated as any);
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updatedUser));
     }
   };
+
+  useEffect(() => {
+    const bootstrapAuth = async () => {
+      setStoreLoading(true);
+      try {
+        const me = await authService.getMe();
+        const mappedUser: User = {
+          id: me._id || me.id,
+          name: me.name,
+          email: me.email,
+          role: me.role,
+          studentId: me.studentId,
+          university: me.university,
+          universityId: me.universityId,
+          degree: me.degree,
+          year: me.year,
+          linkedin: me.linkedin,
+          github: me.github,
+          avatar: me.avatar,
+          skills: me.skills || [],
+          about: me.about || '',
+        };
+        setUser(mappedUser);
+        setStoreUser(me);
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(mappedUser));
+      } catch {
+        setUser(null);
+        setStoreUser(null);
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+      } finally {
+        setStoreLoading(false);
+      }
+    };
+
+    bootstrapAuth();
+  }, [setStoreLoading, setStoreUser]);
 
   return (
     <AuthContext.Provider value={{ user, login, register, logout, updateProfile }}>

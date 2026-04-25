@@ -13,7 +13,7 @@ import {
 import { Bell, Home, Users, MessageSquare, Calendar, User, LogOut, Menu, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { discussionAPI } from '../../services/discussionAPI';
+import { discussionService } from '../services/api';
 
 type NotificationItem = {
   id: string;
@@ -64,7 +64,7 @@ export default function StudentLayout() {
 
     const loadNotifications = async () => {
       try {
-        const response = await discussionAPI.getDiscussions({ sortBy: 'newest', limit: 3 });
+        const response = await discussionService.getDiscussions({ sortBy: 'newest', limit: 3 });
         const discussions = Array.isArray(response?.data) ? response.data : [];
 
         if (discussions.length === 0) {

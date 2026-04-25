@@ -25,7 +25,7 @@ export default function Register() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: Record<string, string> = {};
 
@@ -45,8 +45,12 @@ export default function Register() {
       return;
     }
 
-    register(formData);
-    navigate('/dashboard');
+    try {
+      await register(formData);
+      navigate('/dashboard');
+    } catch {
+      setErrors({ form: 'Registration failed. Please check your details and try again.' });
+    }
   };
 
   return (
@@ -216,6 +220,7 @@ export default function Register() {
                 <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600">
                   Register
                 </Button>
+                {errors.form && <p className="text-sm text-red-600 text-center">{errors.form}</p>}
 
                 <p className="text-center text-sm text-gray-600">
                   Already have an account?{' '}
