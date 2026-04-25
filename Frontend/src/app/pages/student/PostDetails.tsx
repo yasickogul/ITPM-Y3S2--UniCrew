@@ -557,6 +557,7 @@ export default function PostDetails() {
                     className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
                     onClick={handleStartPostEdit}
                     disabled={isDeletingPost || isSavingPost}
+                    data-testid="edit-post-button"
                   >
                     <Edit className="w-4 h-4 mr-1" /> Edit
                   </Button>
@@ -566,6 +567,7 @@ export default function PostDetails() {
                     className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
                     onClick={handleDeletePost}
                     disabled={isDeletingPost || isSavingPost}
+                    data-testid="delete-post-button"
                   >
                     <Trash2 className="w-4 h-4 mr-1" />
                     {isDeletingPost ? 'Deleting...' : 'Delete'}
@@ -599,6 +601,7 @@ export default function PostDetails() {
                   placeholder="Enter post title"
                   className="mt-2"
                   maxLength={200}
+                  data-testid="edit-post-title-input"
                 />
               </div>
 
@@ -625,14 +628,15 @@ export default function PostDetails() {
                   placeholder="Update your post content"
                   rows={10}
                   className="mt-2"
+                  data-testid="edit-post-content-input"
                 />
               </div>
 
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={handleCancelPostEdit} disabled={isSavingPost}>
+                <Button variant="outline" onClick={handleCancelPostEdit} disabled={isSavingPost} data-testid="cancel-post-edit-button">
                   Cancel
                 </Button>
-                <Button onClick={handleSavePostEdit} disabled={isSavingPost}>
+                <Button onClick={handleSavePostEdit} disabled={isSavingPost} data-testid="save-post-edit-button">
                   {isSavingPost ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
