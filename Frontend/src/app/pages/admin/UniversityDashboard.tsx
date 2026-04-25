@@ -2,29 +2,39 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Users, FileCheck, Flag, MessageSquare, Calendar } from 'lucide-react';
-import { eventService } from '../../services/api';
-import { mockPendingPosts, mockReportedPosts, mockCommunities } from '../../data/mockData';
+import { Users, FileCheck, Flag, Calendar } from 'lucide-react';
+import { adminService, communityService, eventService } from '../../services/api';
 import { toast } from 'sonner';
 
 export default function UniversityDashboard() {
   const [pendingEventsCount, setPendingEventsCount] = useState(0);
-  const [isLoadingEvents, setIsLoadingEvents] = useState(true);
+  const [pendingPosts, setPendingPosts] = useState<any[]>([]);
+  const [reportedPosts, setReportedPosts] = useState<any[]>([]);
+  const [communities, setCommunities] = useState<any[]>([]);
 
   useEffect(() => {
-    fetchPendingEventsCount();
+    fetchDashboardData();
   }, []);
 
-  const fetchPendingEventsCount = async () => {
+  const fetchDashboardData = async () => {
     try {
-      setIsLoadingEvents(true);
-      const events = await eventService.getPending();
+      const [events, posts, reports, communityList] = await Promise.all([
+        eventService.getPending(),
+        adminService.getPendingPosts(),
+        adminService.getReportedPosts(),
+        communityService.getAllForAdmin(),
+      ]);
+
       setPendingEventsCount(Array.isArray(events) ? events.length : 0);
+      setPendingPosts(Array.isArray(posts) ? posts : []);
+      setReportedPosts(Array.isArray(reports) ? reports : []);
+      setCommunities(Array.isArray(communityList) ? communityList : []);
     } catch (error) {
-      console.error('Error fetching pending events:', error);
+      toast.error('Failed to load university admin dashboard data');
       setPendingEventsCount(0);
-    } finally {
-      setIsLoadingEvents(false);
+      setPendingPosts([]);
+      setReportedPosts([]);
+      setCommunities([]);
     }
   };
 
@@ -57,7 +67,7 @@ export default function UniversityDashboard() {
             <FileCheck className="w-4 h-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockPendingPosts.length}</div>
+            <div className="text-2xl font-bold">{pendingPosts.length}</div>
             <p className="text-xs text-gray-600">Awaiting approval</p>
           </CardContent>
         </Card>
@@ -68,7 +78,7 @@ export default function UniversityDashboard() {
             <Flag className="w-4 h-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockReportedPosts.length}</div>
+            <div className="text-2xl font-bold">{reportedPosts.length}</div>
             <p className="text-xs text-gray-600">Require attention</p>
           </CardContent>
         </Card>
@@ -79,7 +89,7 @@ export default function UniversityDashboard() {
             <Users className="w-4 h-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockCommunities.length}</div>
+            <div className="text-2xl font-bold">{communities.length}</div>
             <p className="text-xs text-gray-600">Active communities</p>
           </CardContent>
         </Card>
@@ -93,15 +103,16 @@ export default function UniversityDashboard() {
             <CardDescription>Posts waiting for review</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {mockPendingPosts.slice(0, 3).map((post) => (
-              <div key={post.id} className="p-4 border rounded-lg">
-                <p className="font-medium">{post.title}</p>
+            {pendingPosts.slice(0, 3).map((post) => (
+              <div key={post._id} className="p-4 border rounded-lg">
+                <p className="font-medium">{post.title || 'Untitled post'}</p>
                 <p className="text-sm text-gray-600 mt-1">
-                  by {post.author} in {post.community}
+                  by {post.author || 'Unknown'} in {post.communityName || 'Unknown community'}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">{post.timestamp}</p>
+                <p className="text-xs text-gray-500 mt-1">{new Date(post.createdAt).toLocaleString()}</p>
               </div>
             ))}
+            {pendingPosts.length === 0 ? <p className="text-sm text-gray-600">No pending posts.</p> : null}
           </CardContent>
         </Card>
 
@@ -111,26 +122,25 @@ export default function UniversityDashboard() {
             <CardDescription>Content flagged by students</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {mockReportedPosts.map((report) => (
-              <div key={report.id} className="p-4 border rounded-lg border-l-4 border-l-red-500">
+            {reportedPosts.slice(0, 3).map((report) => (
+              <div key={report._id} className="p-4 border rounded-lg border-l-4 border-l-red-500">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="font-medium">{report.postTitle}</p>
+                    <p className="font-medium">{report.title || 'Untitled post'}</p>
                     <p className="text-sm text-gray-600 mt-1">
-                      Reported by {report.reportedBy}
+                      Author: {report.author || 'Unknown'}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">Reason: {report.reason}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Reason: {(report.aiAnalysis?.flagReasons || []).join(', ') || 'Flagged by moderation'}
+                    </p>
                   </div>
-                  <span className={`px-2 py-1 text-xs rounded ${
-                    report.aiSeverity === 'High' 
-                      ? 'bg-red-100 text-red-700' 
-                      : 'bg-orange-100 text-orange-700'
-                  }`}>
-                    {report.aiSeverity}
+                  <span className="px-2 py-1 text-xs rounded bg-red-100 text-red-700">
+                    High
                   </span>
                 </div>
               </div>
             ))}
+            {reportedPosts.length === 0 ? <p className="text-sm text-gray-600">No active reports.</p> : null}
           </CardContent>
         </Card>
       </div>
@@ -143,18 +153,19 @@ export default function UniversityDashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {mockCommunities.map((community) => (
-              <div key={community.id} className="flex items-center justify-between p-3 border rounded-lg">
+            {communities.map((community) => (
+              <div key={community._id} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex-1">
                   <p className="font-medium">{community.name}</p>
                   <p className="text-sm text-gray-600">{community.faculty}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-medium">{community.memberCount}</p>
+                  <p className="font-medium">{community.memberCount || 0}</p>
                   <p className="text-xs text-gray-600">members</p>
                 </div>
               </div>
             ))}
+            {communities.length === 0 ? <p className="text-sm text-gray-600">No communities found.</p> : null}
           </div>
         </CardContent>
       </Card>
