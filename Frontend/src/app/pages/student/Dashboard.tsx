@@ -1,16 +1,43 @@
 import { Link } from 'react-router';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Users, Calendar, MessageSquare, Plus } from 'lucide-react';
-import { mockCommunities, mockEvents, mockPosts } from '../../data/mockData';
 import { useAuthStore } from '../../stores/authStore';
+import { authService } from '../../services/api';
 
 export default function Dashboard() {
   const { user } = useAuthStore();
+  const [dashboardData, setDashboardData] = useState<any>({
+    joinedCommunities: [],
+    upcomingEvents: [],
+    recentPosts: [],
+    metrics: { joinedCommunities: 0, upcomingEvents: 0, myPosts: 0 },
+  });
+  const [loading, setLoading] = useState(true);
 
-  const joinedCommunities = mockCommunities.slice(0, 3);
-  const upcomingEvents = mockEvents.slice(0, 3);
-  const recentPosts = mockPosts.slice(0, 3);
+  useEffect(() => {
+    const loadDashboard = async () => {
+      try {
+        const data = await authService.getDashboard();
+        setDashboardData(data);
+      } catch {
+        setDashboardData({
+          joinedCommunities: [],
+          upcomingEvents: [],
+          recentPosts: [],
+          metrics: { joinedCommunities: 0, upcomingEvents: 0, myPosts: 0 },
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadDashboard();
+  }, []);
+
+  const joinedCommunities = dashboardData.joinedCommunities || [];
+  const upcomingEvents = dashboardData.upcomingEvents || [];
+  const recentPosts = dashboardData.recentPosts || [];
 
   return (
     <div className="space-y-6">
@@ -27,7 +54,7 @@ export default function Dashboard() {
             <Users className="w-4 h-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">4</div>
+            <div className="text-2xl font-bold">{loading ? "..." : dashboardData.metrics.joinedCommunities}</div>
             <p className="text-xs text-gray-600">Active in your network</p>
           </CardContent>
         </Card>
@@ -38,7 +65,7 @@ export default function Dashboard() {
             <Calendar className="w-4 h-4 text-indigo-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{upcomingEvents.length}</div>
+            <div className="text-2xl font-bold">{loading ? "..." : dashboardData.metrics.upcomingEvents}</div>
             <p className="text-xs text-gray-600">This month</p>
           </CardContent>
         </Card>
@@ -49,7 +76,7 @@ export default function Dashboard() {
             <MessageSquare className="w-4 h-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
+            <div className="text-2xl font-bold">{loading ? "..." : dashboardData.metrics.myPosts}</div>
             <p className="text-xs text-gray-600">Total contributions</p>
           </CardContent>
         </Card>
@@ -80,13 +107,13 @@ export default function Dashboard() {
             <CardDescription>Communities you're part of</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {joinedCommunities.map((community) => (
-              <div key={community.id} className="flex items-center justify-between">
+            {joinedCommunities.map((community: any) => (
+              <div key={community._id} className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">{community.name}</p>
-                  <p className="text-sm text-gray-600">{community.memberCount} members</p>
+                  <p className="text-sm text-gray-600">{community.members?.length || 0} members</p>
                 </div>
-                <Link to={`/communities/${community.id}`}>
+                <Link to={`/communities/${community._id}`}>
                   <Button size="sm" variant="outline">View</Button>
                 </Link>
               </div>
@@ -104,10 +131,10 @@ export default function Dashboard() {
             <CardDescription>Don't miss out on these events</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {upcomingEvents.map((event) => (
-              <div key={event.id} className="border-l-4 border-l-blue-600 pl-4">
+            {upcomingEvents.map((event: any) => (
+              <div key={event._id} className="border-l-4 border-l-blue-600 pl-4">
                 <p className="font-medium">{event.title}</p>
-                <p className="text-sm text-gray-600">{event.date} at {event.time}</p>
+                <p className="text-sm text-gray-600">{new Date(event.date).toLocaleDateString()} at {event.time}</p>
                 <p className="text-xs text-gray-500">{event.communityName}</p>
               </div>
             ))}
@@ -125,8 +152,8 @@ export default function Dashboard() {
           <CardDescription>Latest posts from your communities</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {recentPosts.map((post) => (
-            <Link key={post.id} to={`/discussions/${post.id}`}>
+          {recentPosts.map((post: any) => (
+            <Link key={post._id} to={`/discussions/${post._id}`}>
               <div className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1">
@@ -144,9 +171,9 @@ export default function Dashboard() {
                   <span>•</span>
                   <span>{post.communityName}</span>
                   <span>•</span>
-                  <span>{post.timestamp}</span>
+                  <span>{new Date(post.createdAt).toLocaleString()}</span>
                   <span>•</span>
-                  <span>{post.commentCount} comments</span>
+                  <span>{post.comments?.length || 0} comments</span>
                 </div>
               </div>
             </Link>
