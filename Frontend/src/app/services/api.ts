@@ -128,6 +128,10 @@ export const communityService = {
     const response = await api.get("/communities", { params });
     return response.data.data;
   },
+  getAllForAdmin: async (params?: { universityId?: string; faculty?: string; search?: string }) => {
+    const response = await api.get("/communities/admin/all", { params });
+    return response.data.data;
+  },
   getById: async (id: string) => {
     const response = await api.get(`/communities/${id}`);
     return response.data.data;
@@ -154,6 +158,7 @@ export const communityService = {
     faculty: string;
     year: string;
     banner: string;
+    isActive: boolean;
   }>) => {
     const response = await api.put(`/communities/${id}`, data);
     return response.data.data;

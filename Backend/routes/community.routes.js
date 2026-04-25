@@ -4,6 +4,7 @@ const router = express.Router();
 const {
   createCommunity,
   getCommunities,
+  getAllCommunitiesForAdmin,
   getCommunityById,
   updateCommunity,
   deleteCommunity,
@@ -15,7 +16,8 @@ const {
 const { authenticate } = require("../middleware/auth.middleware");
 
 router.post("/", authenticate, createCommunity);
-router.get("/", getCommunities);
+router.get("/admin/all", authenticate, getAllCommunitiesForAdmin);
+router.get("/", authenticate, getCommunities);
 router.get("/my", authenticate, getMyCommunities);
 router.get("/:id", getCommunityById);
 router.put("/:id", authenticate, updateCommunity);

@@ -43,8 +43,59 @@ exports.createCommunity = async (req, res) => {
 
 exports.getCommunities = async (req, res) => {
   try {
-    const { universityId, faculty, search } = req.query;
+    const { universityId: queryUniversityId, faculty, search } = req.query;
     let query = { isActive: true };
+
+    // If user is authenticated, use their universityId (or allow override for system admins)
+    let universityId = queryUniversityId;
+    if (req.user && !universityId) {
+      universityId = req.user.universityId;
+    }
+
+    if (universityId) {
+      if (!isValidId(universityId)) {
+        return res.status(400).json({ message: "Invalid university ID" });
+      }
+      query.universityId = universityId;
+    }
+
+    if (faculty) {
+      query.faculty = faculty;
+    }
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const communities = await Community.find(query)
+      .populate("members", "name email avatar")
+      .populate("createdBy", "name email")
+      .sort({ createdAt: -1 });
+
+    const result = communities.map((c) => ({
+      ...c.toObject(),
+      memberCount: c.members.length,
+    }));
+
+    res.status(200).json({
+      message: "Communities fetched successfully",
+      data: result,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+// Get all communities including inactive ones - for university admin management
+exports.getAllCommunitiesForAdmin = async (req, res) => {
+  try {
+    const { universityId, faculty, search } = req.query;
+    let query = {};
 
     if (universityId) {
       if (!isValidId(universityId)) {
@@ -124,7 +175,7 @@ exports.getCommunityById = async (req, res) => {
 exports.updateCommunity = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, faculty, year, banner } = req.body;
+    const { name, description, faculty, year, banner, isActive } = req.body;
 
     if (!isValidId(id)) {
       return res.status(400).json({
@@ -140,9 +191,9 @@ exports.updateCommunity = async (req, res) => {
       });
     }
 
-    if (community.createdBy.toString() !== req.user.id && req.user.role !== "system_admin") {
+    if (community.createdBy.toString() !== req.user.id && req.user.role !== "system_admin" && req.user.role !== "university_admin") {
       return res.status(403).json({
-        message: "Only the creator or system admin can update this community",
+        message: "Only the creator, university admin, or system admin can update this community",
       });
     }
 
@@ -152,6 +203,7 @@ exports.updateCommunity = async (req, res) => {
     if (faculty) updateFields.faculty = faculty;
     if (year) updateFields.year = year;
     if (banner !== undefined) updateFields.banner = banner;
+    if (isActive !== undefined) updateFields.isActive = isActive;
 
     const updated = await Community.findByIdAndUpdate(id, updateFields, {
       new: true,
