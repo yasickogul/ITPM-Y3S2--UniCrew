@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -8,10 +8,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar'
 import { Badge } from '../../components/ui/badge';
 import { Edit, Github, Linkedin, Mail, Save, X } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
+import { authService } from '../../services/api';
+import { toast } from 'sonner';
 
 export default function Profile() {
   const { user, updateUser } = useAuthStore();
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
     about: user?.about || '',
@@ -20,12 +23,41 @@ export default function Profile() {
     skills: user?.skills?.join(', ') || '',
   });
 
-  const handleSave = () => {
-    updateUser({
-      ...formData,
-      skills: formData.skills.split(',').map(s => s.trim()).filter(s => s),
-    });
-    setIsEditing(false);
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const profile = await authService.getProfile();
+        updateUser(profile);
+        setFormData({
+          name: profile?.name || '',
+          about: profile?.about || '',
+          linkedin: profile?.linkedin || '',
+          github: profile?.github || '',
+          skills: Array.isArray(profile?.skills) ? profile.skills.join(', ') : '',
+        });
+      } catch {
+        // Keep existing local state fallback
+      }
+    };
+    loadProfile();
+  }, [updateUser]);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const payload = {
+        ...formData,
+        skills: formData.skills.split(',').map(s => s.trim()).filter(s => s),
+      };
+      const updated = await authService.updateProfile(payload);
+      updateUser(updated);
+      toast.success('Profile updated successfully');
+      setIsEditing(false);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -211,9 +243,9 @@ export default function Profile() {
 
       {isEditing && (
         <div className="flex gap-4">
-          <Button onClick={handleSave} className="bg-gradient-to-r from-blue-600 to-indigo-600">
+          <Button onClick={handleSave} disabled={isSaving} className="bg-gradient-to-r from-blue-600 to-indigo-600">
             <Save className="w-4 h-4 mr-2" />
-            Save Changes
+            {isSaving ? 'Saving...' : 'Save Changes'}
           </Button>
           <Button variant="outline" onClick={() => setIsEditing(false)}>
             Cancel

@@ -2,7 +2,7 @@ const UniversityAdmin = require("../models/universityAdmin.model");
 const University = require("../models/university.model");
 const User = require("../models/user.model");
 const bcrypt = require("bcrypt");
-const { sendUniversityAdminCredentialsEmail } = require("../utils/sendEmail");
+const jwt = require("jsonwebtoken");
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
@@ -71,20 +71,15 @@ exports.createUniversityAdmin = async (req, res) => {
       status: "Active",
     });
 
-    try {
-      await sendUniversityAdminCredentialsEmail({
-        to: normalizedEmail,
-        fullName: String(fullName).trim(),
-        universityName: university.name,
-        temporaryPassword,
-      });
-    } catch (mailError) {
-      await UniversityAdmin.findByIdAndDelete(admin._id);
-      await User.deleteOne({ email: normalizedEmail });
-      return res.status(500).json({
-        message: `Failed to send admin credentials email: ${mailError.message}`,
-      });
-    }
+    const passwordDeliveryToken = jwt.sign(
+      {
+        email: normalizedEmail,
+        role: "university_admin",
+        purpose: "temporary_password_delivery",
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
 
     const populatedAdmin = await UniversityAdmin.findById(admin._id).populate(
       "university",
@@ -92,8 +87,13 @@ exports.createUniversityAdmin = async (req, res) => {
     );
 
     return res.status(201).json({
-      message: "University admin created successfully. Credentials sent via email.",
+      message: "University admin created successfully",
       data: populatedAdmin,
+      credentials: {
+        // Demo flow until email service is added.
+        temporaryPassword,
+        passwordDeliveryToken,
+      },
     });
   } catch (error) {
     if (error.code === 11000) {

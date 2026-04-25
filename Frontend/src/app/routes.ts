@@ -30,6 +30,7 @@ import UniversityDashboard from './pages/admin/UniversityDashboard';
 import CommunityManagement from './pages/admin/CommunityManagement';
 import PostApproval from './pages/admin/PostApproval';
 import ReportedPosts from './pages/admin/ReportedPosts';
+import EventApproval from './pages/admin/EventApproval';
 
 // System Admin Pages
 import SystemDashboard from './pages/sysadmin/SystemDashboard';
@@ -128,6 +129,14 @@ export const router = createBrowserRouter([
           {
             path: 'posts',
             Component: PostApproval,
+          },
+          {
+            path: 'events/approval',
+            Component: EventApproval,
+          },
+          {
+            path: 'events',
+            Component: EventApproval,
           },
           {
             path: 'reports',

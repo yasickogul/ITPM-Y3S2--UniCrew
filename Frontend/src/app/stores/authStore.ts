@@ -3,7 +3,8 @@ import { create } from "zustand";
 export type UserRole = "student" | "university_admin" | "system_admin";
 
 export interface User {
-  _id: string;
+  _id?: string;
+  id?: string;
   name: string;
   email: string;
   role: UserRole;
@@ -17,9 +18,9 @@ export interface User {
   avatar?: string;
   skills?: string[];
   about?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface AuthState {

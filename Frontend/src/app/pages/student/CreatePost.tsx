@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'sonner';
@@ -7,12 +7,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
 import { Input } from '../../components/ui/input';
 import { mockCommunities } from '../../data/mockData';
-import { discussionAPI } from '../../../services/discussionAPI';
+import { discussionService } from '../../services/api';
 
 export default function CreatePost() {
   const navigate = useNavigate();
   const { user } = useAuth();
-
   const [formData, setFormData] = useState({
     title: '',
     community: '',
@@ -109,19 +108,6 @@ export default function CreatePost() {
         return;
       }
 
-      if (user?.id) {
-        localStorage.setItem('userId', user.id);
-      }
-      if (user?.studentId || user?.name) {
-        localStorage.setItem('userName', user?.studentId || user?.name || 'Student');
-      }
-      if (user?.university) {
-        localStorage.setItem('userUniversity', user.university);
-      }
-      if (user?.role) {
-        localStorage.setItem('userRole', user.role);
-      }
-
       const payload = {
         title: formData.title.trim(),
         content: contentHtml.trim(),
@@ -131,7 +117,7 @@ export default function CreatePost() {
         images,
       };
 
-      const response = await discussionAPI.createDiscussion(payload);
+      const response = await discussionService.createDiscussion(payload);
       toast.success(response.message || 'Post published successfully!');
       navigate('/discussions');
     } catch (error: any) {

@@ -1,6 +1,37 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:3000/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5050";
+const API_URL = `${API_BASE_URL}/api`;
+const ACCESS_TOKEN_KEY = "unicrew.auth.token";
+const REFRESH_TOKEN_KEY = "unicrew.auth.refreshToken";
+
+const getAccessToken = () => {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(ACCESS_TOKEN_KEY);
+};
+
+const setAccessToken = (token?: string | null) => {
+  if (typeof window === "undefined") return;
+  if (token) {
+    localStorage.setItem(ACCESS_TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+  }
+};
+
+const getRefreshToken = () => {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
+};
+
+const setRefreshToken = (token?: string | null) => {
+  if (typeof window === "undefined") return;
+  if (token) {
+    localStorage.setItem(REFRESH_TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  }
+};
 
 const api = axios.create({
   baseURL: API_URL,
@@ -8,6 +39,15 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+});
+
+api.interceptors.request.use((config) => {
+  const token = getAccessToken();
+  if (token) {
+    config.headers = config.headers || {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 api.interceptors.response.use(
@@ -29,10 +69,19 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        await api.post("/auth/refresh");
+        const refreshResponse = await api.post(
+          "/auth/refresh",
+          {},
+          {
+            headers: getRefreshToken() ? { "x-refresh-token": getRefreshToken() } : undefined,
+          }
+        );
+        setAccessToken(refreshResponse?.data?.data?.token);
+        setRefreshToken(refreshResponse?.data?.data?.refreshToken);
         return api(originalRequest);
       } catch (refreshError) {
-        // Don't redirect - let the app handle auth state through Zustand
+        setAccessToken(null);
+        setRefreshToken(null);
         return Promise.reject(refreshError);
       }
     }
@@ -44,6 +93,8 @@ api.interceptors.response.use(
 export const authService = {
   login: async (email: string, password: string, role?: string) => {
     const response = await api.post("/auth/login", { email, password, role });
+    setAccessToken(response?.data?.data?.token);
+    setRefreshToken(response?.data?.data?.refreshToken);
     return response.data.data.user;
   },
 
@@ -60,16 +111,24 @@ export const authService = {
     universityId?: string;
   }) => {
     const response = await api.post("/auth/register", userData);
+    setAccessToken(response?.data?.data?.token);
+    setRefreshToken(response?.data?.data?.refreshToken);
     return response.data.data.user;
   },
 
   logout: async () => {
     const response = await api.post("/auth/logout");
+    setAccessToken(null);
+    setRefreshToken(null);
     return response.data.data;
   },
 
   getMe: async () => {
     const response = await api.get("/auth/me");
+    return response.data.data;
+  },
+  getDashboard: async () => {
+    const response = await api.get("/auth/dashboard");
     return response.data.data;
   },
 
@@ -128,6 +187,10 @@ export const communityService = {
     const response = await api.get("/communities", { params });
     return response.data.data;
   },
+  getAllForAdmin: async (params?: { universityId?: string; faculty?: string; search?: string }) => {
+    const response = await api.get("/communities/admin/all", { params });
+    return response.data.data;
+  },
   getById: async (id: string) => {
     const response = await api.get(`/communities/${id}`);
     return response.data.data;
@@ -154,6 +217,7 @@ export const communityService = {
     faculty: string;
     year: string;
     banner: string;
+    isActive: boolean;
   }>) => {
     const response = await api.put(`/communities/${id}`, data);
     return response.data.data;
@@ -250,6 +314,56 @@ export const adminService = {
   changeUserRole: async (id: string, role: string) => {
     const response = await api.put(`/admin/users/${id}/role`, { role });
     return response.data.data;
+  },
+  getPendingPosts: async () => {
+    const response = await api.get("/admin/posts/pending");
+    return response.data.data;
+  },
+  getReportedPosts: async () => {
+    const response = await api.get("/admin/posts/reported");
+    return response.data.data;
+  },
+  approvePost: async (id: string) => {
+    const response = await api.put(`/admin/posts/${id}/approve`);
+    return response.data.data;
+  },
+  rejectPost: async (id: string) => {
+    const response = await api.put(`/admin/posts/${id}/reject`);
+    return response.data.data;
+  },
+  dismissPostReport: async (id: string) => {
+    const response = await api.put(`/admin/posts/${id}/dismiss-report`);
+    return response.data.data;
+  },
+};
+
+export const discussionService = {
+  createDiscussion: async (payload: {
+    title: string;
+    content: string;
+    communityId: string;
+    communityName: string;
+    category: string;
+    images?: string[];
+  }) => {
+    const response = await api.post("/discussions", payload);
+    return response.data;
+  },
+  getDiscussions: async (params?: Record<string, string | number>) => {
+    const response = await api.get("/discussions", { params });
+    return response.data;
+  },
+  getDiscussionById: async (id: string) => {
+    const response = await api.get(`/discussions/${id}`);
+    return response.data;
+  },
+  likeDiscussion: async (id: string) => {
+    const response = await api.put(`/discussions/${id}/like`);
+    return response.data;
+  },
+  addComment: async (id: string, content: string) => {
+    const response = await api.post(`/discussions/${id}/comments`, { content });
+    return response.data;
   },
 };
 

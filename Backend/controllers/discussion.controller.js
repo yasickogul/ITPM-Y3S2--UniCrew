@@ -66,7 +66,12 @@ const validateCommentContent = (content) => {
 exports.createDiscussion = async (req, res) => {
   try {
     const { title, content, communityId, communityName, category, tags, images } = req.body;
-    const { 'x-user-id': userId, 'x-user-name': userName } = req.headers;
+    const userId = req.user?.id || req.headers['x-user-id'];
+    const userName = req.user?.name || req.headers['x-user-name'];
+
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
 
     // Validation
     const titleError = validateTitle(title);
@@ -221,7 +226,7 @@ exports.getDiscussionById = async (req, res) => {
 
     // Increment view count
     discussion.views += 1;
-    const { 'x-user-id': userId } = req.headers;
+    const userId = req.user?.id || req.headers['x-user-id'];
     if (userId && !discussion.viewedBy.includes(userId)) {
       discussion.viewedBy.push(userId);
     }
@@ -245,7 +250,7 @@ exports.updateDiscussion = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content, category, tags, status } = req.body;
-    const { 'x-user-id': userId } = req.headers;
+    const userId = req.user?.id || req.headers['x-user-id'];
 
     const discussion = await Discussion.findById(id);
     if (!discussion) {
@@ -311,7 +316,7 @@ exports.updateDiscussion = async (req, res) => {
 exports.deleteDiscussion = async (req, res) => {
   try {
     const { id } = req.params;
-    const { 'x-user-id': userId } = req.headers;
+    const userId = req.user?.id || req.headers['x-user-id'];
 
     const discussion = await Discussion.findById(id);
     if (!discussion) {
@@ -349,7 +354,8 @@ exports.addComment = async (req, res) => {
   try {
     const { id } = req.params;
     const { content } = req.body;
-    const { 'x-user-id': userId, 'x-user-name': userName } = req.headers;
+    const userId = req.user?.id || req.headers['x-user-id'];
+    const userName = req.user?.name || req.headers['x-user-name'];
 
     // Validate comment content
     const contentError = validateCommentContent(content);
@@ -397,7 +403,7 @@ exports.editComment = async (req, res) => {
   try {
     const { id, commentId } = req.params;
     const { content } = req.body;
-    const { 'x-user-id': userId } = req.headers;
+    const userId = req.user?.id || req.headers['x-user-id'];
 
     const contentError = validateCommentContent(content);
     if (contentError) {
@@ -448,7 +454,7 @@ exports.editComment = async (req, res) => {
 exports.likeDiscussion = async (req, res) => {
   try {
     const { id } = req.params;
-    const { 'x-user-id': userId } = req.headers;
+    const userId = req.user?.id || req.headers['x-user-id'];
 
     const discussion = await Discussion.findById(id);
     if (!discussion) {
@@ -493,7 +499,7 @@ exports.likeDiscussion = async (req, res) => {
 exports.likeComment = async (req, res) => {
   try {
     const { id, commentId } = req.params;
-    const { 'x-user-id': userId } = req.headers;
+    const userId = req.user?.id || req.headers['x-user-id'];
 
     const discussion = await Discussion.findById(id);
     if (!discussion) {

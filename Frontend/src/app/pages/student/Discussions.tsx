@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu';
 import { mockCommunities } from '../../data/mockData';
-import { discussionAPI } from '../../../services/discussionAPI';
+import { discussionService } from '../../services/api';
 
 type DiscussionPost = {
   id: string;
@@ -84,7 +84,7 @@ export default function Discussions() {
         filters.communityId = selectedCommunity;
       }
 
-      const response = await discussionAPI.getDiscussions(filters);
+      const response = await discussionService.getDiscussions(filters);
       const fetchedPosts = Array.isArray(response?.data) ? response.data : [];
       const initialLikedPosts = new Set<string>();
 
@@ -152,7 +152,7 @@ export default function Discussions() {
     );
 
     try {
-      const response = await discussionAPI.likeDiscussion(postId);
+      const response = await discussionService.likeDiscussion(postId);
       const likes = response?.data?.likes;
 
       if (typeof likes === 'number') {

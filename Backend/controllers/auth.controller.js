@@ -1,11 +1,24 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/user.model");
+const mongoose = require("mongoose");
+const Community = require("../models/community.model");
+const Event = require("../models/event.model");
+const Discussion = require("../models/discussion.model");
 
 const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
 const JWT_SECRET = process.env.JWT_SECRET || "unicrew_secret_key";
+const isDatabaseUnavailableError = (error) => {
+  const message = String(error?.message || "");
+  return (
+    error?.name === "MongooseServerSelectionError" ||
+    message.includes("buffering timed out") ||
+    message.includes("ECONNREFUSED") ||
+    message.includes("ENOTFOUND")
+  );
+};
 
 const generateTokens = (user) => {
-  const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
+  const token = jwt.sign({ id: user._id, role: user.role, universityId: user.universityId }, JWT_SECRET, { expiresIn: "7d" });
   const refreshToken = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "30d" });
   return { token, refreshToken };
 };
@@ -103,6 +116,8 @@ exports.register = async (req, res) => {
       message: "User registered successfully",
       data: {
         user,
+        token,
+        refreshToken,
       },
     });
   } catch (error) {
@@ -154,12 +169,13 @@ exports.login = async (req, res) => {
       });
     }
 
-    const { token } = setCookies(res, user);
+    const { token, refreshToken } = setCookies(res, user);
 
     res.status(200).json({
       message: "Login successful",
       data: {
         token,
+        refreshToken,
         user: {
           id: user._id.toString(),
           name: user.fullName || user.name || "User",
@@ -170,6 +186,12 @@ exports.login = async (req, res) => {
       },
     });
   } catch (error) {
+    if (isDatabaseUnavailableError(error)) {
+      return res.status(503).json({
+        message: "Database is temporarily unavailable. Please try again in a few seconds.",
+      });
+    }
+
     res.status(500).json({
       message: error.message,
     });
@@ -191,7 +213,8 @@ exports.logout = async (req, res) => {
 
 exports.refreshToken = async (req, res) => {
   try {
-    const refreshToken = req.cookies.refreshToken;
+    const refreshToken =
+      req.cookies.refreshToken || req.headers["x-refresh-token"] || req.body?.refreshToken;
     
     if (!refreshToken) {
       return res.status(401).json({
@@ -215,6 +238,8 @@ exports.refreshToken = async (req, res) => {
       message: "Token refreshed successfully",
       data: {
         user,
+        token,
+        refreshToken: newRefreshToken,
       },
     });
   } catch (error) {
@@ -377,6 +402,54 @@ exports.changePassword = async (req, res) => {
 
     res.status(200).json({
       message: "Password changed successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+exports.getDashboard = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        message: "Not authenticated",
+      });
+    }
+
+    const normalizedUserId = mongoose.Types.ObjectId.isValid(userId)
+      ? new mongoose.Types.ObjectId(userId)
+      : userId;
+
+    const [joinedCommunities, myCommunityIds, recentPosts] = await Promise.all([
+      Community.find({ members: normalizedUserId, isActive: true })
+        .sort({ updatedAt: -1 })
+        .limit(5),
+      Community.find({ members: normalizedUserId, isActive: true }).distinct("_id"),
+      Discussion.find({ authorId: String(userId) }).sort({ createdAt: -1 }).limit(5),
+    ]);
+
+    const upcomingEventsQuery =
+      myCommunityIds.length > 0
+        ? { communityId: { $in: myCommunityIds }, status: "upcoming", approvalStatus: "approved" }
+        : { _id: null };
+
+    const upcomingEvents = await Event.find(upcomingEventsQuery).sort({ date: 1 }).limit(5);
+
+    res.status(200).json({
+      message: "Dashboard fetched successfully",
+      data: {
+        joinedCommunities,
+        upcomingEvents,
+        recentPosts,
+        metrics: {
+          joinedCommunities: joinedCommunities.length,
+          upcomingEvents: upcomingEvents.length,
+          myPosts: recentPosts.length,
+        },
+      },
     });
   } catch (error) {
     res.status(500).json({

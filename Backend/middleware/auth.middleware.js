@@ -24,6 +24,7 @@ const mapUser = (decoded) => {
     userId,
     email: decoded.email,
     role: normalizeRole(decoded.role),
+    universityId: decoded.universityId,
   };
 };
 
@@ -53,8 +54,11 @@ const authorize = (...roles) => {
     }
 
     const normalizedAllowed = roles.map((role) => normalizeRole(role));
+
     if (!normalizedAllowed.includes(normalizeRole(req.user.role))) {
-      return res.status(403).json({ message: "Access denied. Insufficient permissions." });
+      return res.status(403).json({
+        message: "Access denied. Insufficient permissions.",
+      });
     }
 
     return next();

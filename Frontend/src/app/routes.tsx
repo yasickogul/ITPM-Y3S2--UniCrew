@@ -162,6 +162,10 @@ export const router = createBrowserRouter([
             Component: EventApproval,
           },
           {
+            path: 'events',
+            Component: EventApproval,
+          },
+          {
             path: 'reports',
             Component: ReportedPosts,
           },

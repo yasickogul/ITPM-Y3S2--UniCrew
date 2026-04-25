@@ -1,0 +1,23 @@
+{
+  "name": "unicrew",
+  "version": "1.0.0",
+  "description": "Welcome to the **UniCrew Discussion Board**, a high-performance community platform for students.",
+  "main": "index.js",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yasickogul/ITPM-Y3S2--UniCrew.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/yasickogul/ITPM-Y3S2--UniCrew/issues"
+  },
+  "homepage": "https://github.com/yasickogul/ITPM-Y3S2--UniCrew#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "@types/node": "^25.6.0"
+  }
+}
