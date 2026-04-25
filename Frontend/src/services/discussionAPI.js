@@ -3,21 +3,16 @@
  * Handles all API calls to the discussion backend endpoints
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050/api';
+const API_ROOT = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050';
+const API_BASE = `${API_ROOT}/api`;
 
 // Helper function to get auth headers from localStorage
 const getAuthHeaders = () => {
-  const userId = localStorage.getItem('userId') || 'test-user';
-  const userName = localStorage.getItem('userName') || 'Test User';
-  const userUniversity = localStorage.getItem('userUniversity') || 'default-university';
-  const userRole = localStorage.getItem('userRole') || 'student';
+  const token = localStorage.getItem('unicrew.auth.token');
 
   return {
     'Content-Type': 'application/json',
-    'x-user-id': userId,
-    'x-user-name': userName,
-    'x-user-university': userUniversity,
-    'x-user-role': userRole,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 };
 
@@ -28,6 +23,7 @@ export const discussionAPI = {
       const response = await fetch(`${API_BASE}/discussions`, {
         method: 'POST',
         headers: getAuthHeaders(),
+        credentials: 'include',
         body: JSON.stringify(discussionData),
       });
 
@@ -47,6 +43,7 @@ export const discussionAPI = {
       const response = await fetch(`${API_BASE}/discussions/${discussionId}/comments`, {
         method: 'POST',
         headers: getAuthHeaders(),
+        credentials: 'include',
         body: JSON.stringify({ content }),
       });
 
@@ -76,6 +73,7 @@ export const discussionAPI = {
       const response = await fetch(`${API_BASE}/discussions?${params.toString()}`, {
         method: 'GET',
         headers: getAuthHeaders(),
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -93,6 +91,7 @@ export const discussionAPI = {
       const response = await fetch(`${API_BASE}/discussions/${discussionId}`, {
         method: 'GET',
         headers: getAuthHeaders(),
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -116,6 +115,7 @@ export const discussionAPI = {
       const response = await fetch(`${API_BASE}/discussions/search?${params.toString()}`, {
         method: 'GET',
         headers: getAuthHeaders(),
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -136,6 +136,7 @@ export const discussionAPI = {
       const response = await fetch(`${API_BASE}/discussions/trending?${params.toString()}`, {
         method: 'GET',
         headers: getAuthHeaders(),
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -154,6 +155,7 @@ export const discussionAPI = {
       const response = await fetch(`${API_BASE}/discussions/${discussionId}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
+        credentials: 'include',
         body: JSON.stringify(updateData),
       });
 
@@ -173,6 +175,7 @@ export const discussionAPI = {
       const response = await fetch(`${API_BASE}/discussions/${discussionId}/comments/${commentId}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
+        credentials: 'include',
         body: JSON.stringify({ content }),
       });
 
@@ -193,6 +196,7 @@ export const discussionAPI = {
       const response = await fetch(`${API_BASE}/discussions/${discussionId}`, {
         method: 'DELETE',
         headers: getAuthHeaders(),
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -212,6 +216,7 @@ export const discussionAPI = {
       const response = await fetch(`${API_BASE}/discussions/${discussionId}/like`, {
         method: 'PUT',
         headers: getAuthHeaders(),
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -230,6 +235,7 @@ export const discussionAPI = {
       const response = await fetch(`${API_BASE}/discussions/${discussionId}/comments/${commentId}/like`, {
         method: 'PUT',
         headers: getAuthHeaders(),
+        credentials: 'include',
       });
 
       if (!response.ok) {
