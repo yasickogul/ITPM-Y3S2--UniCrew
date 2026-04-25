@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router';
-import { useAuth } from '../context/AuthContext';
+import { useAuthStore } from '../stores/authStore';
 import { Button } from '../components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import {
@@ -10,17 +10,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
-import { LayoutDashboard, Users, FileCheck, Flag, LogOut, Menu, X, Shield } from 'lucide-react';
+import { LayoutDashboard, Users, FileCheck, Flag, LogOut, Menu, X, Shield, Calendar } from 'lucide-react';
 import { useState } from 'react';
 
 export default function UniversityAdminLayout() {
-  const { user, logout } = useAuth();
+  const { user, logout } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/');
   };
 
@@ -28,6 +28,7 @@ export default function UniversityAdminLayout() {
     { path: '/university-admin', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/university-admin/communities', icon: Users, label: 'Communities' },
     { path: '/university-admin/posts', icon: FileCheck, label: 'Post Approval' },
+    { path: '/university-admin/events/approval', icon: Calendar, label: 'Event Approval' },
     { path: '/university-admin/reports', icon: Flag, label: 'Reported Posts' },
   ];
 
