@@ -425,8 +425,8 @@ export default function Discussions() {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        <Select value={sortMode} onValueChange={(value: SortMode) => setSortMode(value)}>
-          <SelectTrigger className="w-full sm:w-52 bg-white border-none shadow-sm rounded-xl h-11">
+        <Select value={sortMode} onValueChange={(value: SortMode) => setSortMode(value)} data-testid="sort-select">
+          <SelectTrigger className="w-full sm:w-52 bg-white border-none shadow-sm rounded-xl h-11" data-testid="sort-select-trigger">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
           <SelectContent className="rounded-xl border-none shadow-xl">
