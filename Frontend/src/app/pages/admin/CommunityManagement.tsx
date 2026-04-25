@@ -83,7 +83,12 @@ export default function CommunityManagement() {
 
   const handleCreate = async () => {
     if (!validate()) return;
-    
+
+    if (!user?.university && !user?.universityId) {
+      toast.error('Your admin account is missing university mapping. Please re-login or contact system admin.');
+      return;
+    }
+
     try {
       await communityService.create({
         name: formData.name,
@@ -97,8 +102,9 @@ export default function CommunityManagement() {
       setIsCreateOpen(false);
       resetForm();
       fetchCommunities();
-    } catch (error) {
-      toast.error('Failed to create community');
+    } catch (error: any) {
+      const message = error?.response?.data?.message || 'Failed to create community';
+      toast.error(message);
       console.error('Error creating community:', error);
     }
   };

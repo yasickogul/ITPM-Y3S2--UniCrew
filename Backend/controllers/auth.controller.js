@@ -182,6 +182,7 @@ exports.login = async (req, res) => {
           email: user.email,
           role: user.role,
           university: user.university || null,
+          universityId: user.universityId ? user.universityId.toString() : null,
         },
       },
     });
