@@ -1,4 +1,5 @@
 const Community = require("../models/community.model");
+const University = require("../models/university.model");
 
 const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
 
@@ -6,15 +7,40 @@ exports.createCommunity = async (req, res) => {
   try {
     const { name, description, faculty, year, banner, universityId, universityName } = req.body;
 
-    if (!name || !description || !faculty || !universityId || !universityName) {
+    if (!name || !description || !faculty) {
       return res.status(400).json({
-        message: "Name, description, faculty, universityId, and universityName are required",
+        message: "Name, description, and faculty are required",
       });
     }
 
-    if (!isValidId(universityId)) {
+    let resolvedUniversityId = universityId || req.user.universityId || "";
+    let resolvedUniversityName = String(universityName || "").trim();
+
+    if (!resolvedUniversityId && resolvedUniversityName) {
+      const matchedUniversity = await University.findOne({
+        name: { $regex: `^${resolvedUniversityName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" },
+      }).lean();
+
+      if (matchedUniversity) {
+        resolvedUniversityId = String(matchedUniversity._id);
+        resolvedUniversityName = matchedUniversity.name;
+      }
+    }
+
+    if (!resolvedUniversityId || !isValidId(resolvedUniversityId)) {
       return res.status(400).json({
-        message: "Invalid university ID",
+        message: "Invalid or missing university ID",
+      });
+    }
+
+    if (!resolvedUniversityName) {
+      const matchedUniversity = await University.findById(resolvedUniversityId).lean();
+      resolvedUniversityName = matchedUniversity?.name || "";
+    }
+
+    if (!resolvedUniversityName) {
+      return res.status(400).json({
+        message: "University name is required",
       });
     }
 
@@ -25,8 +51,8 @@ exports.createCommunity = async (req, res) => {
       year: year || "All Years",
       banner: banner || "",
       members: [req.user.id],
-      universityId,
-      universityName,
+      universityId: resolvedUniversityId,
+      universityName: resolvedUniversityName,
       createdBy: req.user.id,
     });
 
