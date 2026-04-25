@@ -17,6 +17,8 @@ const systemAdminRoutes = require("./routes/systemAdmin.routes");
 const app = express();
 const PORT = process.env.PORT || 5050;
 
+mongoose.set("bufferCommands", false);
+
 app.use(cookieParser());
 app.use(
   cors({
@@ -36,16 +38,31 @@ app.use(
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "x-user-id",
+      "x-user-name",
+      "x-user-university",
+      "x-user-role",
+      "x-refresh-token",
+    ],
+    exposedHeaders: ["set-cookie"],
   })
 );
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("Database is connected."))
-  .catch((err) => console.log(err));
+const isDbConnected = () => mongoose.connection.readyState === 1;
+
+app.use("/api", (req, res, next) => {
+  if (!isDbConnected()) {
+    return res.status(503).json({
+      message: "Database is temporarily unavailable. Please try again in a few seconds.",
+    });
+  }
+  return next();
+});
 
 app.use("/api/universities", universityRoutes);
 app.use("/api/events", eventRoutes);
@@ -61,6 +78,28 @@ app.get("/", (req, res) => {
   res.send("API Running...");
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+const startServer = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 10000,
+    });
+    console.log("Database is connected.");
+
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error("MongoDB connection failed:", err.message);
+    process.exit(1);
+  }
+};
+
+mongoose.connection.on("disconnected", () => {
+  console.warn("MongoDB disconnected.");
 });
+
+mongoose.connection.on("reconnected", () => {
+  console.log("MongoDB reconnected.");
+});
+
+startServer();

@@ -3,8 +3,26 @@ const router = express.Router();
 
 const { authenticate, authorize } = require("../middleware/auth.middleware");
 const User = require("../models/user.model");
+const Community = require("../models/community.model");
+const Discussion = require("../models/discussion.model");
 
 router.use(authenticate);
+
+const getScopedCommunityIds = async (req) => {
+  if (req.user.role === "system_admin") {
+    return null;
+  }
+
+  const admin = await User.findById(req.user.id).select("universityId").lean();
+  const universityId = req.user.universityId || admin?.universityId;
+
+  if (!universityId) {
+    return [];
+  }
+
+  const communities = await Community.find({ universityId }).select("_id").lean();
+  return communities.map((community) => String(community._id));
+};
 
 router.get("/users", authorize("system_admin", "university_admin"), async (req, res) => {
   try {
@@ -28,6 +46,140 @@ router.get("/users", authorize("system_admin", "university_admin"), async (req, 
     res.status(500).json({
       message: error.message,
     });
+  }
+});
+
+router.get("/posts/pending", authorize("system_admin", "university_admin"), async (req, res) => {
+  try {
+    const scopedCommunityIds = await getScopedCommunityIds(req);
+    const query = {
+      status: { $in: ["Flagged", "Open"] },
+    };
+
+    if (Array.isArray(scopedCommunityIds)) {
+      query.communityId = { $in: scopedCommunityIds };
+    }
+
+    const posts = await Discussion.find(query).sort({ createdAt: -1 }).limit(100);
+
+    res.status(200).json({
+      message: "Pending posts fetched successfully",
+      data: posts,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+});
+
+router.get("/posts/reported", authorize("system_admin", "university_admin"), async (req, res) => {
+  try {
+    const scopedCommunityIds = await getScopedCommunityIds(req);
+    const query = {
+      $or: [{ status: "Flagged" }, { "aiAnalysis.isFlagged": true }],
+    };
+
+    if (Array.isArray(scopedCommunityIds)) {
+      query.communityId = { $in: scopedCommunityIds };
+    }
+
+    const posts = await Discussion.find(query).sort({ createdAt: -1 }).limit(100);
+
+    res.status(200).json({
+      message: "Reported posts fetched successfully",
+      data: posts,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+});
+
+router.put("/posts/:id/approve", authorize("system_admin", "university_admin"), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const scopedCommunityIds = await getScopedCommunityIds(req);
+
+    const post = await Discussion.findById(id);
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    if (Array.isArray(scopedCommunityIds) && !scopedCommunityIds.includes(String(post.communityId))) {
+      return res.status(403).json({ message: "You can only moderate posts in your university" });
+    }
+
+    post.status = "Open";
+    if (post.aiAnalysis) {
+      post.aiAnalysis.isFlagged = false;
+      post.aiAnalysis.flagReasons = [];
+    }
+    await post.save();
+
+    return res.status(200).json({
+      message: "Post approved successfully",
+      data: post,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+router.put("/posts/:id/reject", authorize("system_admin", "university_admin"), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const scopedCommunityIds = await getScopedCommunityIds(req);
+
+    const post = await Discussion.findById(id);
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    if (Array.isArray(scopedCommunityIds) && !scopedCommunityIds.includes(String(post.communityId))) {
+      return res.status(403).json({ message: "You can only moderate posts in your university" });
+    }
+
+    post.status = "Closed";
+    await post.save();
+
+    return res.status(200).json({
+      message: "Post rejected successfully",
+      data: post,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+router.put("/posts/:id/dismiss-report", authorize("system_admin", "university_admin"), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const scopedCommunityIds = await getScopedCommunityIds(req);
+
+    const post = await Discussion.findById(id);
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    if (Array.isArray(scopedCommunityIds) && !scopedCommunityIds.includes(String(post.communityId))) {
+      return res.status(403).json({ message: "You can only moderate posts in your university" });
+    }
+
+    post.status = "Open";
+    if (post.aiAnalysis) {
+      post.aiAnalysis.isFlagged = false;
+      post.aiAnalysis.flagReasons = [];
+    }
+    await post.save();
+
+    return res.status(200).json({
+      message: "Report dismissed successfully",
+      data: post,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
   }
 });
 
