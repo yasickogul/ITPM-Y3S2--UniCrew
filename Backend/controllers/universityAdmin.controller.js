@@ -1,7 +1,7 @@
 const UniversityAdmin = require("../models/universityAdmin.model");
 const University = require("../models/university.model");
 const User = require("../models/user.model");
-const bcrypt = require("bcrypt");
+const mongoose = require("mongoose");
 const { sendUniversityAdminCredentialsEmail } = require("../utils/sendEmail");
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -16,6 +16,7 @@ const generateTemporaryPassword = (length = 10) => {
 };
 
 exports.createUniversityAdmin = async (req, res) => {
+  const session = await mongoose.startSession();
   try {
     const { fullName, email, assignedUniversity } = req.body;
 
@@ -46,46 +47,52 @@ exports.createUniversityAdmin = async (req, res) => {
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
-    const existingUser = await User.findOne({ email: normalizedEmail });
+    const trimmedFullName = String(fullName).trim();
+
+    const existingUser = await User.findOne({ email: normalizedEmail }).lean();
     if (existingUser) {
       return res.status(409).json({
         message: "A user with this email already exists",
       });
     }
 
-    const admin = await UniversityAdmin.create({
-      fullName: String(fullName).trim(),
-      email: normalizedEmail,
-      university: assignedUniversity,
-    });
-
+    session.startTransaction();
     const temporaryPassword = generateTemporaryPassword();
-    const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
+    const [admin] = await UniversityAdmin.create(
+      [
+        {
+          fullName: trimmedFullName,
+          email: normalizedEmail,
+          university: assignedUniversity,
+        },
+      ],
+      { session }
+    );
 
-    await User.create({
-      fullName: String(fullName).trim(),
-      email: normalizedEmail,
-      password: hashedPassword,
-      role: "university_admin",
-      university: assignedUniversity,
-      status: "Active",
+    await User.create(
+      [
+        {
+          fullName: trimmedFullName,
+          name: trimmedFullName,
+          email: normalizedEmail,
+          password: temporaryPassword,
+          role: "university_admin",
+          universityId: assignedUniversity,
+          university: university.name,
+          status: "Active",
+        },
+      ],
+      { session }
+    );
+
+    await sendUniversityAdminCredentialsEmail({
+      to: normalizedEmail,
+      fullName: trimmedFullName,
+      universityName: university.name,
+      temporaryPassword,
     });
 
-    try {
-      await sendUniversityAdminCredentialsEmail({
-        to: normalizedEmail,
-        fullName: String(fullName).trim(),
-        universityName: university.name,
-        temporaryPassword,
-      });
-    } catch (mailError) {
-      await UniversityAdmin.findByIdAndDelete(admin._id);
-      await User.deleteOne({ email: normalizedEmail });
-      return res.status(500).json({
-        message: `Failed to send admin credentials email: ${mailError.message}`,
-      });
-    }
-
+    await session.commitTransaction();
     const populatedAdmin = await UniversityAdmin.findById(admin._id).populate(
       "university",
       "name domain"
@@ -96,6 +103,10 @@ exports.createUniversityAdmin = async (req, res) => {
       data: populatedAdmin,
     });
   } catch (error) {
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+
     if (error.code === 11000) {
       return res.status(409).json({
         message: "University admin with given email already exists",
@@ -105,6 +116,8 @@ exports.createUniversityAdmin = async (req, res) => {
     return res.status(500).json({
       message: error.message,
     });
+  } finally {
+    session.endSession();
   }
 };
 
@@ -193,13 +206,19 @@ exports.updateUniversityAdmin = async (req, res) => {
 
     if (user) {
       if (fullName !== undefined && fullName !== null) {
-        user.fullName = String(fullName).trim();
+        const trimmedName = String(fullName).trim();
+        user.fullName = trimmedName;
+        user.name = trimmedName;
       }
       if (newEmail !== prevEmail) {
         user.email = newEmail;
       }
       if (assignedUniversity !== undefined && assignedUniversity !== null) {
-        user.university = assignedUniversity;
+        const nextUniversity = await University.findById(assignedUniversity).lean();
+        if (nextUniversity) {
+          user.universityId = assignedUniversity;
+          user.university = nextUniversity.name;
+        }
       }
       if (status !== undefined && status !== null) {
         user.status = admin.status;

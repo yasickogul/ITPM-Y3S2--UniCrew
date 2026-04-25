@@ -3,15 +3,35 @@
 const University = require("../models/university.model");
 
 const isValidId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+const normalizeDomain = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/^@/, "")
+    .replace(/^https?:\/\//, "")
+    .replace(/\/.*$/, "")
+    .replace(/\.$/, "");
+
+const duplicateUniversityMessage = (error) => {
+  const field = error?.keyPattern ? Object.keys(error.keyPattern)[0] : "domain";
+  const value = error?.keyValue?.[field];
+
+  if (field === "domain") {
+    return `University with domain "${value || "provided value"}" already exists`;
+  }
+
+  if (field === "name") {
+    return `University with name "${value || "provided value"}" already exists`;
+  }
+
+  return "University with given details already exists";
+};
 
 // CREATE UNIVERSITY
 exports.createUniversity = async (req, res) => {
   try {
     const { name, domain, emailDomain, description } = req.body;
-    const normalizedDomain = String(domain || emailDomain || "")
-      .trim()
-      .toLowerCase()
-      .replace(/^@/, "");
+    const normalizedDomain = normalizeDomain(domain || emailDomain);
 
     if (!name || !normalizedDomain) {
       return res.status(400).json({
@@ -44,7 +64,7 @@ exports.createUniversity = async (req, res) => {
   } catch (error) {
     if (error.code === 11000) {
       return res.status(409).json({
-        message: "University with given domain already exists",
+        message: duplicateUniversityMessage(error),
       });
     }
 
@@ -107,10 +127,7 @@ exports.updateUniversity = async (req, res) => {
     const { name, domain, emailDomain, description } = req.body;
     const normalizedDomain =
       domain !== undefined || emailDomain !== undefined
-        ? String(domain || emailDomain || "")
-            .trim()
-            .toLowerCase()
-            .replace(/^@/, "")
+        ? normalizeDomain(domain || emailDomain)
         : undefined;
 
     if (!isValidId(id)) {
@@ -178,7 +195,7 @@ exports.updateUniversity = async (req, res) => {
   } catch (error) {
     if (error.code === 11000) {
       return res.status(409).json({
-        message: "University with given domain already exists",
+        message: duplicateUniversityMessage(error),
       });
     }
 
